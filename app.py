@@ -24,7 +24,7 @@ LIGHT = "#F5F5F5"        # Light gray/white
 ACCENT = "#BF7930"       # Copper tone
 
 # Define default keywords - hardcoded for consistency
-DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, caterpillar, komatsu, Komatsu, KOMATSU, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician"
+DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, komatsu, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician, Minera México, Peñoles, Coeur, First Majestic, Fresnillo, Newmont, Goldcorp, Pan American, Panamericana, Argonaut, Frisco, Endeavour, colorada, chispas, filos, gatos, san julian, palmarejo, parral, santa elena, tayoltita, saucito, san dimas, san francisco, san jose, san luis, san martin, san nicolas, san patricio, san rafael, san vicente, santa cruz, santa maria, santa rosa, santa rita"
 
 # Define keyword tags to display (can be the same as DEFAULT_KEYWORDS but split into a list)
 KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión"]
@@ -320,7 +320,7 @@ def main():
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         
         # Add the reset button with a tooltip
-        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", key="reset_keywords", on_click=reset_keywords, type="secondary")
+        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", on_click=reset_keywords)
     
     # Add a divider
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
