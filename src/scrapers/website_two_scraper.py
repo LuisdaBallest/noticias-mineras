@@ -9,8 +9,8 @@ import streamlit as st
 class WebsiteTwoScraper(Scraper):
     def __init__(self, keywords):
         self.keywords = keywords.split(',') if isinstance(keywords, str) else keywords
-        self.base_url = st.secrets.get('WEBSITE_TWO_URL', 'https://mundominero.mx/category/mineria/')
-        self.article_limit = 10  # Set the article limit
+        self.base_url = st.secrets.get('WEBSITE_TWO_URL')
+        self.article_limit = 15  # Set the article limit
         
     def scrape(self):
         print(f"Starting scrape of {self.base_url}")

@@ -8,7 +8,7 @@ class WebsiteOneScraper(Scraper):
     def __init__(self, keywords):
         self.keywords = keywords.split(',') if isinstance(keywords, str) else keywords
         self.base_url = st.secrets.get('WEBSITE_ONE_URL')
-        self.article_limit = 10  # Set the article limit
+        self.article_limit = 15  # Set the article limit
 
     def scrape(self):
         html_content = self.fetch_html(self.base_url)

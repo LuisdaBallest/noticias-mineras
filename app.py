@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit as st
 from src.scrapers.website_one_scraper import WebsiteOneScraper
 from src.scrapers.website_two_scraper import WebsiteTwoScraper
+from src.scrapers.website_three_scraper import WebsiteThreeScraper
 from src.summarizer.openai_summarizer import OpenAISummarizer
 
 
@@ -23,10 +24,10 @@ LIGHT = "#F5F5F5"        # Light gray/white
 ACCENT = "#BF7930"       # Copper tone
 
 # Define default keywords - hardcoded for consistency
-DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, caterpillar, komatsu, Komatsu, KOMATSU, expandir, expansión, expande, expanden"
+DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, caterpillar, komatsu, Komatsu, KOMATSU, expandir, expansión, expande, expanden, expandirse"
 
 # Define keyword tags to display (can be the same as DEFAULT_KEYWORDS but split into a list)
-KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión", "yacimiento"]
+KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión"]
 
 # Custom CSS to style the application with professional colors
 st.markdown("""
@@ -268,12 +269,14 @@ def main():
                 # Initialize scrapers
                 website_one_scraper = WebsiteOneScraper(keywords)
                 website_two_scraper = WebsiteTwoScraper(keywords)
+                website_three_scraper = WebsiteThreeScraper(keywords)
                 
                 articles_one = website_one_scraper.scrape()
                 articles_two = website_two_scraper.scrape()
-                
+                articles_three = website_three_scraper.scrape()
+
                 # Combine articles
-                articles = articles_one + articles_two
+                articles = articles_one + articles_two + articles_three
                 
                 # Articles count display with appropriate styling based on count
                 if len(articles) > 0:
