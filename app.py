@@ -8,25 +8,11 @@ from src.summarizer.openai_summarizer import OpenAISummarizer
 st.set_page_config(
     page_title="Noticias Mineras México",
     page_icon="📰",  # Puedes usar un emoji o una ruta a un archivo de imagen
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-# Forzar tema claro
-st.markdown("""
-<script>
-    var elements = window.parent.document.querySelectorAll('.st-emotion-cache-1q1n0ol'); 
-    elements.forEach(element => {
-        element.setAttribute('data-testid', 'stAppViewBlockContainer');
-        element.classList.add('light');
-    });
-    // Eliminar el botón de cambio de tema
-    var settingsButton = window.parent.document.querySelector('[data-testid="baseButton-headerNoPadding"]');
-    if (settingsButton) {
-        settingsButton.style.display = 'none';
-    }
-</script>
-""", unsafe_allow_html=True)
+
 
 # Define professional color palette
 PRIMARY = "#1A4D80"      # Deep blue
