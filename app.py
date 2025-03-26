@@ -206,6 +206,29 @@ st.markdown("""
         color: """+MEDIUM+""";
         font-style: italic;
     }
+    /* Reset button styling */
+    .reset-button {
+        background-color: """+LIGHT+""" !important;
+        color: """+MEDIUM+""" !important;
+        border: 1px solid #ddd !important;
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.8rem !important;
+        border-radius: 4px !important;
+        transition: all 0.2s;
+        margin-top: 1.5rem;
+    }
+
+    .reset-button:hover {
+        background-color: #eeeeee !important;
+        border-color: """+MEDIUM+""" !important;
+    }
+
+    /* Container for keywords text area and reset button */
+    .keywords-container {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
