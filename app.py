@@ -24,7 +24,7 @@ LIGHT = "#F5F5F5"        # Light gray/white
 ACCENT = "#BF7930"       # Copper tone
 
 # Define default keywords - hardcoded for consistency
-DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, caterpillar, komatsu, Komatsu, KOMATSU, expandir, expansión, expande, expanden, expandirse"
+DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, caterpillar, komatsu, Komatsu, KOMATSU, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician"
 
 # Define keyword tags to display (can be the same as DEFAULT_KEYWORDS but split into a list)
 KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión"]
@@ -209,6 +209,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Función para restaurar los keywords predeterminados
+def reset_keywords():
+    st.session_state.keywords = DEFAULT_KEYWORDS
 
 # Función para eliminar artículos duplicados
 def deduplicate_articles(articles_list):
@@ -272,14 +275,27 @@ def main():
     # We use st.session_state to preserve the input value if the user makes changes
     if 'keywords' not in st.session_state:
         st.session_state.keywords = DEFAULT_KEYWORDS
-    
-    # Update the text area with session state value, which will be DEFAULT_KEYWORDS on first load
-    keywords = st.text_area("", value=st.session_state.keywords, height=80, 
-                          placeholder="Ejemplo: minería, oro, plata, cobre, proyecto")
-    
-    # Update session state if user changes the input
-    if keywords != st.session_state.keywords:
-        st.session_state.keywords = keywords
+
+    # Create two columns for the text area and reset button
+    kw_col1, kw_col2 = st.columns([5, 1])
+
+    # Text area in the first (wider) column
+    with kw_col1:
+        # Update the text area with session state value
+        keywords = st.text_area("", value=st.session_state.keywords, height=80,
+                            placeholder="Ejemplo: minería, oro, plata, cobre, proyecto")
+        
+        # Update session state if user changes the input
+        if keywords != st.session_state.keywords:
+            st.session_state.keywords = keywords
+
+    # Reset button in the second (narrower) column
+    with kw_col2:
+        # Add some space to align with the text area
+        st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+        
+        # Add the reset button with a tooltip
+        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", key="reset_keywords", on_click=reset_keywords)
     
     # Add a divider
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -305,7 +321,7 @@ def main():
                 # Combine articles
                 all_articles = articles_one + articles_two + articles_three
 
-                
+
                 articles = deduplicate_articles(all_articles)
 
                 # Articles count display with appropriate styling based on count

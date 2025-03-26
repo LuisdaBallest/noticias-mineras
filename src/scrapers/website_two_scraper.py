@@ -10,7 +10,7 @@ class WebsiteTwoScraper(Scraper):
     def __init__(self, keywords):
         self.keywords = keywords.split(',') if isinstance(keywords, str) else keywords
         self.base_url = st.secrets.get('WEBSITE_TWO_URL')
-        self.article_limit = 15  # Set the article limit
+        self.article_limit = 15  # Límite de artículos
         
     def scrape(self):
         print(f"Starting scrape of {self.base_url}")
