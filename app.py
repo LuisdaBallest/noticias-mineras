@@ -209,6 +209,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+# Función para eliminar artículos duplicados
+def deduplicate_articles(articles_list):
+    """
+    Elimina artículos duplicados basados en el título
+    Preserva el primer artículo encontrado con cada título
+    """
+    unique_articles = []
+    seen_titles = set()
+    
+    # Itera por la lista de artículos
+    for article in articles_list:
+        # Normaliza el título (minúsculas, sin espacios extra)
+        title = article['title'].lower().strip()
+        
+        # Si este título no ha sido visto antes, agrégalo
+        if title not in seen_titles:
+            seen_titles.add(title)
+            unique_articles.append(article)
+            
+    # Reporta cuántos duplicados se eliminaron
+    duplicates_removed = len(articles_list) - len(unique_articles)
+    if duplicates_removed > 0:
+        print(f"Se eliminaron {duplicates_removed} artículos duplicados")
+        
+    return unique_articles
+
 def main():
     # Custom title with HTML
     st.markdown('<div class="main-title">Noticias Mineras México</div>', unsafe_allow_html=True)
@@ -276,8 +303,11 @@ def main():
                 articles_three = website_three_scraper.scrape()
 
                 # Combine articles
-                articles = articles_one + articles_two + articles_three
+                all_articles = articles_one + articles_two + articles_three
+
                 
+                articles = deduplicate_articles(all_articles)
+
                 # Articles count display with appropriate styling based on count
                 if len(articles) > 0:
                     st.markdown(f'<div class="success-box">📊 Se encontraron {len(articles)} artículos relacionados con sus términos de búsqueda.</div>', unsafe_allow_html=True)
