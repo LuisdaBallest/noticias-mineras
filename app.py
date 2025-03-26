@@ -206,9 +206,10 @@ st.markdown("""
         color: """+MEDIUM+""";
         font-style: italic;
     }
-    /* Reset button styling */
-    .reset-button {
+    /* Estilo específico para el botón de reset */
+    button[data-testid="baseButton-secondary"] {
         background-color: """+LIGHT+""" !important;
+        background-image: none !important;
         color: """+MEDIUM+""" !important;
         border: 1px solid #ddd !important;
         padding: 0.4rem 0.8rem !important;
@@ -216,9 +217,10 @@ st.markdown("""
         border-radius: 4px !important;
         transition: all 0.2s;
         margin-top: 1.5rem;
+        font-weight: normal !important;
     }
 
-    .reset-button:hover {
+    button[data-testid="baseButton-secondary"]:hover {
         background-color: #eeeeee !important;
         border-color: """+MEDIUM+""" !important;
     }
@@ -318,7 +320,7 @@ def main():
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         
         # Add the reset button with a tooltip
-        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", key="reset_keywords", on_click=reset_keywords)
+        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", key="reset_keywords", on_click=reset_keywords, type="secondary")
     
     # Add a divider
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
