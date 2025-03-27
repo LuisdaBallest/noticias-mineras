@@ -418,21 +418,18 @@ def main():
                                 try:
                                     # Verificar que la URL de la imagen sea válida
                                     if article['image']['url'] and article['image']['url'].strip():
-                                        # Mostrar contenedor para la imagen con altura máxima
-                                        st.markdown('<div class="image-container">', unsafe_allow_html=True)
+                                        # Usar HTML puro para mostrar la imagen dentro del contenedor
+                                        img_url = article['image']['url']
+                                        img_alt = article['image'].get('alt', article['title'])
                                         
-                                        # Cargar la imagen con manejo de errores
-                                        st.image(
-                                            article['image']['url'], 
-                                            caption=article['image'].get('alt', ''), 
-                                            use_cntainer_width=True,
-                                            output_format='auto'
-                                        )
-                                        
-                                        st.markdown("</div>", unsafe_allow_html=True)
+                                        st.markdown(f'''
+                                        <div class="image-container">
+                                            <img src="{img_url}" alt="{img_alt}" />
+                                        </div>
+                                        ''', unsafe_allow_html=True)
                                 except Exception as e:
                                     st.markdown('<div class="image-fallback">No se pudo cargar la imagen del artículo.</div>', unsafe_allow_html=True)
-                                    print(f"Error loading image: {str(e)}")
+                                    print(f"Error cargando imagen: {str(e)}")
                             
                             # Source link with custom styling
                             st.markdown(f"""
