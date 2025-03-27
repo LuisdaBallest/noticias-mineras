@@ -334,7 +334,7 @@ def main():
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
         
         # Add the reset button with a tooltip
-        reset_button = st.button("🔄 Restaurar", help="Restaurar palabras clave predeterminadas", on_click=reset_keywords)
+        reset_button = st.button("⭮ Restaurar", help="Restaurar palabras clave predeterminadas", on_click=reset_keywords)
     
     # Add a divider
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
