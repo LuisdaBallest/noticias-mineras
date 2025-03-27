@@ -9,7 +9,7 @@ import streamlit as st
 class WebsiteFourScraper(Scraper):
     def __init__(self, keywords):
         self.keywords = keywords.split(',') if isinstance(keywords, str) else keywords
-        self.base_url = st.secrets.get('WEBSITE_FOUR_URL', 'https://www.rumbominero.com/category/mexico/')
+        self.base_url = st.secrets.get('WEBSITE_FOUR_URL')
         self.article_limit = 10  # Set the article limit
         
     def scrape(self):
