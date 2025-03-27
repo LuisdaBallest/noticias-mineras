@@ -187,14 +187,27 @@ st.markdown("""
         font-size: 0.8rem;
     }
     
-    /* Image container */
+    /* Image container - tamaño fijo y uniforme */
     .image-container {
-        max-height: 250px; 
+        width: 100%;
+        height: 180px; /* Altura fija para todas las imágenes */
         overflow: hidden; 
         margin-bottom: 1rem; 
         text-align: center; 
         background-color: #f8f8f8; 
         border-radius: 4px;
+        position: relative; /* Para posicionamiento interno */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Estilo para la imagen dentro del contenedor */
+    .image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Mantiene la proporción y cubre el contenedor */
+        object-position: center; /* Centra la imagen */
     }
     
     /* Image fallback message */
@@ -412,7 +425,8 @@ def main():
                                         st.image(
                                             article['image']['url'], 
                                             caption=article['image'].get('alt', ''), 
-                                            use_container_width=True
+                                            use_column_width=True,
+                                            output_format='auto'
                                         )
                                         
                                         st.markdown("</div>", unsafe_allow_html=True)
