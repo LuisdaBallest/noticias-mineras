@@ -3,6 +3,7 @@ import streamlit as st
 from src.scrapers.website_one_scraper import WebsiteOneScraper
 from src.scrapers.website_two_scraper import WebsiteTwoScraper
 from src.scrapers.website_three_scraper import WebsiteThreeScraper
+from src.scrapers.website_four_scraper import WebsiteFourScraper
 from src.summarizer.openai_summarizer import OpenAISummarizer
 
 
@@ -24,7 +25,7 @@ LIGHT = "#F5F5F5"        # Light gray/white
 ACCENT = "#BF7930"       # Copper tone
 
 # Define default keywords - hardcoded for consistency
-DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, komatsu, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician, Minera México, Peñoles, Coeur, First Majestic, Fresnillo, Newmont, Goldcorp, Pan American, Panamericana, Argonaut, Frisco, Endeavour, colorada, chispas, filos, gatos, san julian, palmarejo, parral, santa elena, tayoltita, saucito, san dimas, san francisco, san jose, san luis, san martin, san nicolas, san patricio, san rafael, san vicente, santa cruz, santa maria, santa rosa, santa rita"
+DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, acero, aluminio, cemento, cementera, cantera, canteras, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, komatsu, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician, Minera México, Peñoles, Coeur, First Majestic, Fresnillo, Newmont, Goldcorp, Pan American, Panamericana, Argonaut, Frisco, Endeavour, colorada, chispas, filos, gatos, san julian, palmarejo, parral, santa elena, tayoltita, saucito, san dimas, san francisco, san josé, san luis, san martin, san nicolas, san patricio, san rafael, san vicente, santa cruz, santa maria, santa rosa, santa rita, media luna, Torex, Pinnacle, Silver Wolf, copalquin, Bear Creek, mercedes, cananea, aumenta, aumentar, aumentará, aumentan, aumentó, durango, nuevo"
 
 # Define keyword tags to display (can be the same as DEFAULT_KEYWORDS but split into a list)
 KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión"]
@@ -338,13 +339,15 @@ def main():
                 website_one_scraper = WebsiteOneScraper(keywords)
                 website_two_scraper = WebsiteTwoScraper(keywords)
                 website_three_scraper = WebsiteThreeScraper(keywords)
+                website_four_scraper = WebsiteFourScraper(keywords)
                 
                 articles_one = website_one_scraper.scrape()
                 articles_two = website_two_scraper.scrape()
                 articles_three = website_three_scraper.scrape()
+                articles_four = website_four_scraper.scrape()
 
                 # Combine articles
-                all_articles = articles_one + articles_two + articles_three
+                all_articles = articles_one + articles_two + articles_three + articles_four
 
 
                 articles = deduplicate_articles(all_articles)
