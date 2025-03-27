@@ -425,7 +425,7 @@ def main():
                                         st.image(
                                             article['image']['url'], 
                                             caption=article['image'].get('alt', ''), 
-                                            use_column_width=True,
+                                            use_cntainer_width=True,
                                             output_format='auto'
                                         )
                                         
