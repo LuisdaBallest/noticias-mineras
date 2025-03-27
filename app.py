@@ -17,7 +17,7 @@ st.set_page_config(
 
 
 # Define professional color palette
-PRIMARY = "#E0600B"    # Deep blue
+PRIMARY = "#fc6603"    # Deep blue
 SECONDARY = "#C99D45"    # Gold metallic accent
 DARK = "#303030"         # Dark gray almost black
 MEDIUM = "#6C757D"       # Medium gray
