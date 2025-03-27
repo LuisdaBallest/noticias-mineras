@@ -41,7 +41,7 @@ st.markdown("""
     /* Main title styling */
     .main-title {
         color: white;
-        background: linear-gradient(135deg, """+PRIMARY+""" 0%, """+DARK+""" 100%);
+        background: linear-gradient(135deg, """+PRIMARY+""" 0%, """+DARK+""" 70%);
         padding: 1.5rem;
         border-radius: 4px;
         font-size: 2rem;
