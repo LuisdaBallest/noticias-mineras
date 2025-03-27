@@ -15,6 +15,10 @@ class WebsiteFourScraper(Scraper):
     def scrape(self):
         print(f"Starting scrape of {self.base_url}")
         html_content = self.fetch_html(self.base_url)
+        
+        # Puedes descomentar la siguiente línea cuando necesites diagnosticar problemas
+        # self.analyze_page_structure(html_content)
+        
         return self.parse_articles(html_content)
 
     def fetch_html(self, url):
@@ -138,18 +142,15 @@ class WebsiteFourScraper(Scraper):
         # Debug information
         print(f"Page title: {soup.title.text if soup.title else 'No title found'}")
         
-        # Buscar el contenedor principal según la estructura proporcionada
-        main_container = soup.select_one('div[id="tdi_130"], .td_block_inner')
+        # Buscar específicamente la estructura de RumboMinero
+        # Buscar el div con id="tdi_130" que contiene los artículos
+        main_container = soup.select_one('div#tdi_130.td_block_inner')
         
         if main_container:
-            print(f"Found main container: {main_container.name} with id={main_container.get('id', 'no-id')}")
+            print(f"Found main container with id=tdi_130")
             
-            # Buscar todos los módulos de artículos según la estructura proporcionada
-            article_modules = main_container.select('.td_module_16, .td_module_wrap, .td-animation-stack')
-            
-            if not article_modules:
-                # Intentar con otro selector más genérico
-                article_modules = main_container.select('div[class*="td_module_"]')
+            # Buscar todos los módulos de artículos con la clase específica
+            article_modules = main_container.select('.td_module_16.td_module_wrap.td-animation-stack')
             
             print(f"Found {len(article_modules)} article modules")
             
@@ -159,181 +160,347 @@ class WebsiteFourScraper(Scraper):
                     if len(articles) >= self.article_limit:
                         break
                     
-                    # Buscar el thumbnail y el enlace/título como mencionaste
-                    thumb_container = article_module.select_one('.td-module-thumb')
+                    # Obtener título y enlace
+                    title_element = article_module.select_one('.entry-title.td-module-title a')
                     
-                    if thumb_container:
-                        # Buscar el enlace del artículo con la clase específica
-                        link_element = thumb_container.select_one('a.td-image-wrap')
+                    if not title_element:
+                        print("No title element found in article container")
+                        continue
+                    
+                    title = title_element.get_text(strip=True)
+                    link = title_element.get('href')
+                    
+                    if not title or not link:
+                        print("Missing title or link")
+                        continue
                         
-                        if link_element and link_element.has_attr('href') and link_element.has_attr('title'):
-                            # Extraer título del atributo title del enlace
-                            title = link_element.get('title', '').strip()
-                            link = link_element['href']
+                    print(f"Found article: {title}")
+                        
+                    # Verificar keywords
+                    if self.keywords and not any(keyword.lower().strip() in title.lower() for keyword in self.keywords):
+                        print(f"Skipping article (no matching keywords): {title}")
+                        continue
+                    
+                    # Obtener imagen
+                    thumb_element = article_module.select_one('.td-module-thumb a img')
+                    image = {'url': None, 'alt': title}
+                    
+                    if thumb_element:
+                        # Intentar obtener src o data-img-url
+                        if thumb_element.has_attr('src'):
+                            image['url'] = thumb_element['src']
+                        elif thumb_element.has_attr('data-img-url'):
+                            image['url'] = thumb_element['data-img-url']
+                        
+                        # Obtener texto alternativo
+                        if thumb_element.has_attr('alt'):
+                            image['alt'] = thumb_element['alt']
+                    
+                    # Fetch article content
+                    time.sleep(1)  # Be nice to the server
+                    article_html = self.fetch_html(link)
+                    
+                    if article_html:
+                        article_soup = BeautifulSoup(article_html, 'html.parser')
+                        
+                        # Si no tenemos imagen desde el listado, buscamos en la página del artículo
+                        if not image['url']:
+                            image = self.extract_image(article_soup, link)
+                        
+                        # Buscar el contenido del artículo
+                        content_element = article_soup.select_one('.td-post-content')
+                        
+                        if not content_element:
+                            # Intentar con selectores alternativos
+                            for selector in [
+                                '.td_block_wrap .tdb-block-inner',
+                                '.td-post-content',
+                                '.tdb_single_content',
+                                'article .content',
+                                '.entry-content'
+                            ]:
+                                content_element = article_soup.select_one(selector)
+                                if content_element:
+                                    print(f"Found content with selector '{selector}'")
+                                    break
+                        
+                        if content_element:
+                            # Limpiar el contenido
+                            for unwanted in content_element.select('script, style, .sharedaddy, .jp-relatedposts, .social-share, .comments-area, .navigation'):
+                                unwanted.decompose()
                             
-                            # Si encontramos título y enlace, procesamos el artículo
-                            if title and link:
-                                print(f"Found article: {title}")
-                                
-                                # Verificar keywords
-                                if self.keywords and not any(keyword.lower().strip() in title.lower() for keyword in self.keywords):
-                                    print(f"Skipping article (no matching keywords): {title}")
-                                    continue
-                                
-                                # Extraer imagen directamente del thumbnail
-                                image = {'url': None, 'alt': title}
-                                img_element = thumb_container.select_one('img')
-                                
-                                if img_element:
-                                    # Intentar obtener la URL de la imagen
-                                    if img_element.has_attr('src'):
-                                        image['url'] = img_element['src']
-                                    elif img_element.has_attr('data-src'):
-                                        image['url'] = img_element['data-src']
-                                        
-                                    # Obtener texto alternativo si está disponible
-                                    if img_element.has_attr('alt'):
-                                        image['alt'] = img_element['alt']
-                                        
-                                    # Hacer URL de imagen absoluta si es necesario
-                                    if image['url'] and not image['url'].startswith('http'):
-                                        if image['url'].startswith('//'):
-                                            image['url'] = 'https:' + image['url']
-                                        elif image['url'].startswith('/'):
-                                            base_domain = 'https://www.rumbominero.com'
-                                            image['url'] = base_domain + image['url']
-                                
-                                # Fetch article content
-                                time.sleep(1)  # Be nice to the server
-                                article_html = self.fetch_html(link)
-                                
-                                if article_html:
-                                    article_soup = BeautifulSoup(article_html, 'html.parser')
-                                    
-                                    # Si no obtuvimos una imagen válida del listado, intentar extraerla de la página del artículo
-                                    if not image['url'] or 'placeholder' in image['url']:
-                                        image = self.extract_image(article_soup, link)
-                                    
-                                    # Try to find content - RumboMinero typically uses .td-post-content
-                                    content_element = article_soup.select_one('.td-post-content, .entry-content, article .content')
-                                    
-                                    if not content_element:
-                                        # Try more generic selectors if specific ones fail
-                                        for selector in [
-                                            'div.post-content',
-                                            'div.content', 
-                                            'article',
-                                            'div.entry',
-                                            'main',
-                                            'div#content'
-                                        ]:
-                                            content_element = article_soup.select_one(selector)
-                                            if content_element:
-                                                print(f"Found content with selector '{selector}'")
-                                                break
-                                    
-                                    if content_element:
-                                        # Clean content - remove scripts, social sharing, etc.
-                                        for unwanted in content_element.select('script, style, .sharedaddy, .jp-relatedposts, .social-share, .comments-area, .navigation'):
-                                            unwanted.decompose()
-                                        
-                                        text = content_element.get_text(strip=True, separator=' ')
-                                        print(f"Extracted {len(text)} characters of content")
-                                    else:
-                                        print(f"Could not find content for: {title}")
-                                        text = ""
-                                        
-                                    # Add the article to our list
-                                    articles.append({
-                                        'title': title,
-                                        'link': link,
-                                        'text': text,
-                                        'image': image
-                                    })
-                                    print(f"Successfully added article: {title}")
-                                else:
-                                    print(f"Failed to fetch article content for: {title}")
+                            text = content_element.get_text(strip=True, separator=' ')
+                            print(f"Extracted {len(text)} characters of content")
+                        else:
+                            print(f"Could not find content for: {title}")
+                            text = ""
+                        
+                        # Añadir el artículo a nuestra lista
+                        articles.append({
+                            'title': title,
+                            'link': link,
+                            'text': text,
+                            'image': image
+                        })
+                        print(f"Successfully added article: {title}")
+                    else:
+                        print(f"Failed to fetch article content for: {title}")
                 
                 except Exception as e:
                     print(f"Error parsing article: {str(e)}")
                     continue
         else:
-            print("Could not find the main article container")
+            print("Main container div#tdi_130.td_block_inner not found")
             
-            # Try alternative approach for finding articles
-            # Find all td_module elements across the page as a fallback
-            article_modules = soup.select('div[class*="td_module_"]')
-            print(f"Fallback: Found {len(article_modules)} article modules")
+            # Método alternativo: buscar por estructura de módulos individuales
+            article_modules = soup.select('.td_module_16.td_module_wrap.td-animation-stack')
+            print(f"Trying alternative approach, found {len(article_modules)} article modules")
             
-            for article_module in article_modules:
-                try:
-                    # Break the loop if we've reached the limit
-                    if len(articles) >= self.article_limit:
-                        break
-                    
-                    # Look for link with title
-                    link_element = article_module.select_one('a[title]') or article_module.select_one('.entry-title a')
-                    
-                    if link_element and link_element.has_attr('href'):
-                        # Get title from link text or title attribute
-                        title = link_element.get_text(strip=True) or link_element.get('title', '')
-                        link = link_element['href']
+            if article_modules:
+                for article_module in article_modules:
+                    try:
+                        # Break the loop if we've reached the limit
+                        if len(articles) >= self.article_limit:
+                            break
                         
-                        if title and link:
-                            print(f"Found article via fallback: {title}")
+                        # Obtener título y enlace
+                        title_element = article_module.select_one('.entry-title.td-module-title a')
+                        
+                        if not title_element:
+                            print("No title element found in article container")
+                            continue
+                        
+                        title = title_element.get_text(strip=True)
+                        link = title_element.get('href')
+                        
+                        if not title or not link:
+                            print("Missing title or link")
+                            continue
                             
-                            # Check keywords
-                            if self.keywords and not any(keyword.lower().strip() in title.lower() for keyword in self.keywords):
-                                print(f"Skipping article (no matching keywords): {title}")
-                                continue
+                        print(f"Found article: {title}")
                             
-                            # Process article as before
-                            # Rest of processing code similar to above
-                            # ...
-                
-                except Exception as e:
-                    print(f"Error in fallback article parsing: {str(e)}")
-                    continue
+                        # Verificar keywords
+                        if self.keywords and not any(keyword.lower().strip() in title.lower() for keyword in self.keywords):
+                            print(f"Skipping article (no matching keywords): {title}")
+                            continue
+                        
+                        # Obtener imagen
+                        thumb_element = article_module.select_one('.td-module-thumb a img')
+                        image = {'url': None, 'alt': title}
+                        
+                        if thumb_element:
+                            # Intentar obtener src o data-img-url
+                            if thumb_element.has_attr('src'):
+                                image['url'] = thumb_element['src']
+                            elif thumb_element.has_attr('data-img-url'):
+                                image['url'] = thumb_element['data-img-url']
+                            
+                            # Obtener texto alternativo
+                            if thumb_element.has_attr('alt'):
+                                image['alt'] = thumb_element['alt']
+                        
+                        # Fetch article content
+                        time.sleep(1)  # Be nice to the server
+                        article_html = self.fetch_html(link)
+                        
+                        if article_html:
+                            article_soup = BeautifulSoup(article_html, 'html.parser')
+                            
+                            # Si no tenemos imagen desde el listado, buscamos en la página del artículo
+                            if not image['url']:
+                                image = self.extract_image(article_soup, link)
+                            
+                            # Buscar el contenido del artículo
+                            content_element = article_soup.select_one('.td-post-content')
+                            
+                            if not content_element:
+                                # Intentar con selectores alternativos
+                                for selector in [
+                                    '.td_block_wrap .tdb-block-inner',
+                                    '.td-post-content',
+                                    '.tdb_single_content',
+                                    'article .content',
+                                    '.entry-content'
+                                ]:
+                                    content_element = article_soup.select_one(selector)
+                                    if content_element:
+                                        print(f"Found content with selector '{selector}'")
+                                        break
+                            
+                            if content_element:
+                                # Limpiar el contenido
+                                for unwanted in content_element.select('script, style, .sharedaddy, .jp-relatedposts, .social-share, .comments-area, .navigation'):
+                                    unwanted.decompose()
+                                
+                                text = content_element.get_text(strip=True, separator=' ')
+                                print(f"Extracted {len(text)} characters of content")
+                            else:
+                                print(f"Could not find content for: {title}")
+                                text = ""
+                            
+                            # Añadir el artículo a nuestra lista
+                            articles.append({
+                                'title': title,
+                                'link': link,
+                                'text': text,
+                                'image': image
+                            })
+                            print(f"Successfully added article: {title}")
+                        else:
+                            print(f"Failed to fetch article content for: {title}")
                     
-        # Final fallback if no articles found yet
+                    except Exception as e:
+                        print(f"Error parsing article: {str(e)}")
+                        continue
+        
+        # Si todavía no tenemos artículos, intentar un enfoque más general con la estructura HTML
         if not articles:
-            # Look for links that might be article titles anywhere on the page
-            potential_articles = soup.select('a[title], .entry-title a, h3 a, h2 a')
+            print("Attempting general HTML structure approach")
             
-            print(f"Final fallback: Found {len(potential_articles)} potential article links")
+            # Buscar todos los módulos que podrían contener artículos
+            potential_articles = soup.select('div[class*="td_module_"]')
             
-            for link_element in potential_articles:
+            for article_div in potential_articles:
                 try:
                     # Break the loop if we've reached the limit
                     if len(articles) >= self.article_limit:
                         break
-                        
-                    title = link_element.get_text(strip=True) or link_element.get('title', '')
-                    if not title or len(title) < 10:  # Skip very short titles or empty ones
-                        continue
-                        
-                    if not link_element.has_attr('href'):
-                        continue
-                        
-                    link = link_element['href']
                     
-                    # Make sure this is an article link
-                    if not ('rumbominero.com' in link and '/noticias/' in link):
-                        continue
-                        
-                    print(f"Found potential article via final fallback: {title}")
+                    # Buscar título y enlace
+                    title_element = article_div.select_one('h3 a, h2 a, .entry-title a')
                     
-                    # Check keywords
+                    if not title_element:
+                        continue
+                    
+                    title = title_element.get_text(strip=True)
+                    link = title_element.get('href')
+                    
+                    if not title or not link or 'rumbominero.com' not in link:
+                        continue
+                    
+                    print(f"Found article with general approach: {title}")
+                    
+                    # Verificar keywords
                     if self.keywords and not any(keyword.lower().strip() in title.lower() for keyword in self.keywords):
                         print(f"Skipping article (no matching keywords): {title}")
                         continue
                     
-                    # Process article (similar to above code)
-                    # ...
+                    # Obtener imagen - buscar dentro del módulo primero
+                    image = {'url': None, 'alt': title}
+                    img = article_div.select_one('img')
                     
+                    if img:
+                        if img.has_attr('src'):
+                            image['url'] = img['src']
+                        elif img.has_attr('data-src'):
+                            image['url'] = img['data-src']
+                        elif img.has_attr('data-img-url'):
+                            image['url'] = img['data-img-url']
+                            
+                        if img.has_attr('alt'):
+                            image['alt'] = img['alt']
+                    
+                    # Fetch article content
+                    time.sleep(1)  # Be nice to the server
+                    article_html = self.fetch_html(link)
+                    
+                    if article_html:
+                        article_soup = BeautifulSoup(article_html, 'html.parser')
+                        
+                        # Si no tenemos imagen desde el listado, buscamos en la página del artículo
+                        if not image['url']:
+                            image = self.extract_image(article_soup, link)
+                        
+                        # Buscar el contenido del artículo - probar diversos selectores
+                        content_element = None
+                        for selector in [
+                            '.td-post-content',
+                            '.td_block_wrap .tdb-block-inner',
+                            '.tdb_single_content',
+                            'article .content',
+                            '.entry-content',
+                            '.post-content',
+                            'article'
+                        ]:
+                            content_element = article_soup.select_one(selector)
+                            if content_element:
+                                print(f"Found content with selector '{selector}'")
+                                break
+                        
+                        if content_element:
+                            # Limpiar el contenido
+                            for unwanted in content_element.select('script, style, .sharedaddy, .jp-relatedposts, .social-share, .comments-area, .navigation'):
+                                unwanted.decompose()
+                            
+                            text = content_element.get_text(strip=True, separator=' ')
+                            print(f"Extracted {len(text)} characters of content")
+                        else:
+                            print(f"Could not find content for: {title}")
+                            text = ""
+                        
+                        # Añadir el artículo a nuestra lista
+                        articles.append({
+                            'title': title,
+                            'link': link,
+                            'text': text,
+                            'image': image
+                        })
+                        print(f"Successfully added article: {title}")
+                    else:
+                        print(f"Failed to fetch article content for: {title}")
+                
                 except Exception as e:
-                    print(f"Error in final fallback article processing: {str(e)}")
+                    print(f"Error in general approach: {str(e)}")
                     continue
         
         print(f"Total articles found after filtering: {len(articles)}")
         return articles
+
+    def analyze_page_structure(self, html_content):
+        """Analiza la estructura de la página para ayudar a ajustar los selectores"""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Buscar posibles contenedores de artículos
+        print("\n=== ANÁLISIS DE ESTRUCTURA DE PÁGINA ===")
+        
+        # 1. Buscar divs con 'block_inner' en su clase
+        block_inners = soup.select('div[class*="block_inner"]')
+        print(f"Encontrados {len(block_inners)} divs con 'block_inner' en su clase")
+        for i, container in enumerate(block_inners):
+            container_id = container.get('id', 'sin-id')
+            article_count = len(container.select('div[class*="td_module_"]'))
+            print(f"  {i+1}. Container id={container_id} contiene {article_count} elementos de módulo")
+        
+        # 2. Buscar clases de módulos de artículos
+        modules = soup.select('div[class*="td_module_"]')
+        module_types = {}
+        for module in modules:
+            classes = module.get('class', [])
+            module_type = next((c for c in classes if c.startswith('td_module_')), 'unknown')
+            module_types[module_type] = module_types.get(module_type, 0) + 1
+        
+        print("\nTipos de módulos encontrados:")
+        for module_type, count in module_types.items():
+            print(f"  - {module_type}: {count} elementos")
+        
+        # 3. Analizar un módulo de ejemplo si existe
+        if modules:
+            print("\nEstructura de un módulo de ejemplo:")
+            example = modules[0]
+            
+            # Título
+            title_element = example.select_one('h3.entry-title, h3.td-module-title, .entry-title')
+            if title_element:
+                title_link = title_element.select_one('a')
+                if title_link:
+                    print(f"  Título: {title_link.get_text(strip=True)}")
+                    print(f"  Enlace: {title_link.get('href', 'no-href')}")
+            
+            # Imagen
+            img_element = example.select_one('img')
+            if img_element:
+                print(f"  Imagen src: {img_element.get('src', 'no-src')}")
+                print(f"  Imagen data-src: {img_element.get('data-src', 'no-data-src')}")
+                print(f"  Imagen data-img-url: {img_element.get('data-img-url', 'no-data-img-url')}")
+        
+        print("=== FIN DEL ANÁLISIS ===\n")
