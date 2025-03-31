@@ -96,7 +96,7 @@ st.markdown("""
     
     /* Buttons styling */
     .stButton>button {
-        background: linear-gradient(135deg, """+PRIMARY+""" 0%, """+DARK+""" 100%);
+        background: linear-gradient(140deg, """+PRIMARY+""" 0%, """+DARK+""" 130%);
         color: white;
         font-weight: 600;
         border: none;
