@@ -5,7 +5,7 @@ from src.scrapers.website_two_scraper import WebsiteTwoScraper
 from src.scrapers.website_three_scraper import WebsiteThreeScraper
 from src.scrapers.website_four_scraper import WebsiteFourScraper
 from src.summarizer.openai_summarizer import OpenAISummarizer
-
+import concurrent.futures
 
 st.set_page_config(
     page_title="Noticias Mineras México",
@@ -354,15 +354,57 @@ def main():
                 website_three_scraper = WebsiteThreeScraper(keywords)
                 website_four_scraper = WebsiteFourScraper(keywords)
                 
-                articles_one = website_one_scraper.scrape()
-                articles_two = website_two_scraper.scrape()
-                articles_three = website_three_scraper.scrape()
-                articles_four = website_four_scraper.scrape()
+                # Create status containers to show progress
+                status_container = st.empty()
+                status_container.markdown('<div class="info-box">⏳ Extrayendo datos de fuentes públicas ...</div>', unsafe_allow_html=True)
+                
+                # Execute scrapers concurrently using ThreadPoolExecutor
+                scrapers = [
+                    website_one_scraper, 
+                    website_two_scraper, 
+                    website_three_scraper, 
+                    website_four_scraper
+                ]
+                scraper_names = ["Minería en Línea", "Mundo Minero", "Cluster Minero", "Rumbo Minero"]
+                
+                # Dictionary to store results
+                articles_dict = {}
+                
+                # Execute scraping concurrently
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    # Submit all scraping tasks
+                    future_to_scraper = {
+                        executor.submit(scraper.scrape): (scraper, name) 
+                        for scraper, name in zip(scrapers, scraper_names)
+                    }
+                    
+                    # Process results as they complete
+                    for future in concurrent.futures.as_completed(future_to_scraper):
+                        scraper, name = future_to_scraper[future]
+                        try:
+                            articles = future.result()
+                            articles_dict[name] = articles
+                            status_container.markdown(
+                                f'<div class="info-box">✅ {name}: {len(articles)} artículos encontrados</div>', 
+                                unsafe_allow_html=True
+                            )
+                        except Exception as exc:
+                            print(f"{name} generó una excepción: {exc}")
+                            articles_dict[name] = []
+                            status_container.markdown(
+                                f'<div class="warning-box">⚠️ Error al procesar {name}: {exc}</div>', 
+                                unsafe_allow_html=True
+                            )
+                
+                # Combine all articles
+                all_articles = []
+                for name, articles in articles_dict.items():
+                    all_articles.extend(articles)
+                    
+                # Remove status container
+                status_container.empty()
 
-                # Combine articles
-                all_articles = articles_one + articles_two + articles_three + articles_four
-
-
+                # Deduplicate articles
                 articles = deduplicate_articles(all_articles)
 
                 # Articles count display with appropriate styling based on count
