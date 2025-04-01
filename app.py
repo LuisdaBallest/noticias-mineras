@@ -280,11 +280,15 @@ def deduplicate_articles(articles_list):
     return unique_articles
 
 def main():
-
+    # Variables de estado para mantener la aplicación entre recargas
     if 'articles' not in st.session_state:
-        st.session_state.articles = []
-    if 'email_sent' not in st.session_state:
-        st.session_state.email_sent = False
+        st.session_state.articles = []  # Para guardar los artículos
+    if 'search_performed' not in st.session_state:
+        st.session_state.search_performed = False  # Para saber si se realizó una búsqueda
+    if 'email_status' not in st.session_state:
+        st.session_state.email_status = None  # Para mostrar estado del envío de correo
+    if 'summarizer' not in st.session_state:
+        st.session_state.summarizer = OpenAISummarizer()  # Inicializar el summarizer una sola vez
 
     # Custom title with HTML
     st.markdown('<div class="main-title">Noticias Mineras México</div>', unsafe_allow_html=True)
@@ -306,7 +310,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Show keyword examples as tags - using the predefined list
+    # Show keyword examples as tags
     keyword_tags_html = ""
     for tag in KEYWORD_TAGS:
         keyword_tags_html += f'<span class="keyword-tag">{tag}</span>\n'
@@ -314,20 +318,18 @@ def main():
     st.markdown(f"""
     <div style="margin-bottom: 1rem;">
         {keyword_tags_html}
-   
+    </div>
     """, unsafe_allow_html=True)
     
-    # Keyword input - using the predefined default value
-    # We use st.session_state to preserve the input value if the user makes changes
+    # Keyword input with session state
     if 'keywords' not in st.session_state:
         st.session_state.keywords = DEFAULT_KEYWORDS
 
     # Create two columns for the text area and reset button
     kw_col1, kw_col2 = st.columns([5, 1])
 
-    # Text area in the first (wider) column
+    # Text area in the first column
     with kw_col1:
-        # Update the text area with session state value
         keywords = st.text_area("", value=st.session_state.keywords, height=80,
                             placeholder="Ejemplo: minería, oro, plata, cobre, proyecto")
         
@@ -335,24 +337,22 @@ def main():
         if keywords != st.session_state.keywords:
             st.session_state.keywords = keywords
 
-    # Reset button in the second (narrower) column
+    # Reset button in the second column
     with kw_col2:
-        # Add some space to align with the text area
         st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-        
-        # Add the reset button with a tooltip
         reset_button = st.button("⭮ Restaurar", help="Restaurar palabras clave predeterminadas", on_click=reset_keywords)
     
     # Add a divider
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     
-    # Create styled button
+    # Search button
     search_button = st.button("🔍 Buscar Noticias")
     
+    # PROCESO DE BÚSQUEDA
     if search_button:
         if keywords:
             with st.spinner("⏳ Buscando y analizando noticias de la industria minera..."):
-                # Progress information with custom styling
+                # Progress information
                 st.markdown('<div class="info-box">⚙️ Inicializando sistema de búsqueda...</div>', unsafe_allow_html=True)
                 
                 # Initialize scrapers
@@ -361,17 +361,12 @@ def main():
                 website_three_scraper = WebsiteThreeScraper(keywords)
                 website_four_scraper = WebsiteFourScraper(keywords)
                 
-                # Create status containers to show progress
+                # Status container
                 status_container = st.empty()
-                status_container.markdown('<div class="info-box">⏳ Extrayendo datos de fuentes públicas ...</div>', unsafe_allow_html=True)
+                status_container.markdown('<div class="info-box">⏳ Extrayendo datos de fuentes públicas...</div>', unsafe_allow_html=True)
                 
-                # Execute scrapers concurrently using ThreadPoolExecutor
-                scrapers = [
-                    website_one_scraper, 
-                    website_two_scraper, 
-                    website_three_scraper, 
-                    website_four_scraper
-                ]
+                # Execute scrapers concurrently
+                scrapers = [website_one_scraper, website_two_scraper, website_three_scraper, website_four_scraper]
                 scraper_names = ["Minería en Línea", "Mundo Minero", "Cluster Minero", "Rumbo Minero"]
                 
                 # Dictionary to store results
@@ -413,20 +408,19 @@ def main():
 
                 # Deduplicate articles
                 articles = deduplicate_articles(all_articles)
-                st.session_state.articles = articles  # Guardar en session_state
-
-                # Articles count display with appropriate styling based on count
+                
+                # Guardar en session_state
+                st.session_state.articles = articles
+                st.session_state.search_performed = True
+                
+                # Display articles count
                 if len(articles) > 0:
                     st.markdown(f'<div class="success-box">📊 Se encontraron {len(articles)} artículos relacionados con sus términos de búsqueda.</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="warning-box">📊 No se encontraron artículos que coincidan con los términos especificados.</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="warning-box">📊 No se encontraron artículos que coincidan con los términos especificados.</div>', unsafe_allow_html=True)
                 
-                # Initialize summarizer if we have articles
-                if articles:
-                    summarizer = OpenAISummarizer()
-                
+                # Si no hay artículos, mostrar recomendaciones
                 if not articles:
-                    st.markdown('<div class="warning-box">⚠️ No se encontraron artículos con las palabras clave proporcionadas.</div>', unsafe_allow_html=True)
                     st.markdown("""
                     <div class="info-box">
                         <div class="label">Recomendaciones para mejorar su búsqueda:</div>
@@ -438,139 +432,150 @@ def main():
                         </ul>
                     </div>
                     """, unsafe_allow_html=True)
-                else:
-                    if st.session_state.articles:
-                        articles = st.session_state.articles
-                    # Add a divider before articles
-                    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-                    st.markdown('<div class="subtitle">Artículos Encontrados</div>', unsafe_allow_html=True)
-                    
-                    # Display total articles count
-                    st.markdown(f"""
-                    <div style="margin-bottom: 1rem; text-align: right; color: {MEDIUM};">
-                        Mostrando {len(articles)} artículos | Ordenados por relevancia
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Display summaries
-                    for i, article in enumerate(articles):
-                        with st.expander(f"{i+1}. {article['title']}"):
-                           
-                            
-                            # Display article metadata
-                            st.markdown(f"""
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
-                                <div>Artículo #{i+1}</div>
-                                <div>Fuente: {article['link'].split('/')[2]}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Display image if available
-                            if article.get('image') and article['image'].get('url'):
-                                try:
-                                    # Verificar que la URL de la imagen sea válida
-                                    if article['image']['url'] and article['image']['url'].strip():
-                                        # Usar HTML puro para mostrar la imagen dentro del contenedor
-                                        img_url = article['image']['url']
-                                        img_alt = article['image'].get('alt', article['title'])
-                                        
-                                        st.markdown(f'''
-                                        <div class="image-container">
-                                            <img src="{img_url}" alt="{img_alt}" />
-                                        </div>
-                                        ''', unsafe_allow_html=True)
-                                except Exception as e:
-                                    st.markdown('<div class="image-fallback">No se pudo cargar la imagen del artículo.</div>', unsafe_allow_html=True)
-                                    print(f"Error cargando imagen: {str(e)}")
-                            
-                            # Source link with custom styling
-                            st.markdown(f"""
-                            <div style="margin: 0.8rem 0;">
-                                <span class="label">Enlace original:</span> 
-                                <a href="{article['link']}" target="_blank" class="source-link">{article['link']}</a>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Add a separator line
-                            st.markdown('<hr style="margin: 1rem 0; border-color: #eaeaea;">', unsafe_allow_html=True)
-                            
-                            # Generate summary with spinner
-                            with st.spinner("Analizando contenido con IA..."):
-                                summary = summarizer.summarize(article['text'])
-                            
-                            # Display summary with custom styling
-                            st.markdown(f"""
-                            <div style="margin: 0.8rem 0;">
-                                <div class="label" style="color: {PRIMARY}; display: flex; align-items: center;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-text" viewBox="0 0 16 16" style="margin-right: 0.5rem;">
-                                        <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
-                                        <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
-                                    </svg>
-                                    RESUMEN EJECUTIVO
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            st.markdown(f'<div class="summary-section">{summary}</div>', unsafe_allow_html=True)
-
-                    # Add a divider before email section
-                    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-                    st.markdown('<div class="subtitle">Enviar Informe por Correo</div>', unsafe_allow_html=True)
-
-                    # Email distribution section
-                    st.markdown("""
-                    <div style="margin-bottom: 1rem; color: """+MEDIUM+""";">
-                        Envíe un informe con estos artículos a uno o varios destinatarios.
-                        Ingrese las direcciones de correo electrónico separadas por comas.
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # Email input
-                    email_recipients = st.text_area("Destinatarios", 
-                                            placeholder="ejemplo@empresa.com, gerente@minera.mx", 
-                                            help="Ingrese una o varias direcciones de correo separadas por comas")
-
-                    # Send button
-                    send_col1, send_col2 = st.columns([3, 1])
-                    with send_col2:
-                        send_email_button = st.button("📧 Enviar Informe por Correo", key="send_email_btn")
-
-                    if send_email_button:
-                        if not email_recipients:
-                            st.markdown('<div class="warning-box">⚠️ Por favor, ingrese al menos una dirección de correo electrónico.</div>', unsafe_allow_html=True)
-                        else:
-                            # Parse email addresses
-                            email_list = [email.strip() for email in email_recipients.split(",")]
-                            
-                            # Feedback container
-                            email_status = st.empty()
-                            
-                            # Send email with progress indicator
-                            with st.spinner("Enviando informe por correo electrónico..."):
-                                try:
-                                    success, message = send_email_report(email_list, st.session_state.articles, keywords)
-                                    
-                                    if success:
-                                        email_status.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
-                                    else:
-                                        email_status.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
-                                except Exception as e:
-                                    email_status.markdown(f'<div class="warning-box">⚠️ Error al enviar el correo: {str(e)}</div>', unsafe_allow_html=True)
-                                    print(f"Error en el envío de correo: {str(e)}")
-
-                                
-                    # Add footer
-                    st.markdown("""
-                    <div class="footer">
-                        <div style="margin-bottom: 0.5rem;">© 2025 Monitor de Noticias Mineras México</div>
-                        <div style="font-size: 0.7rem;">Desarrollado con tecnología de procesamiento de lenguaje natural | Datos extraídos de fuentes públicas</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                            
         else:
             st.markdown('<div class="warning-box">⚠️ Por favor ingresa al menos una palabra clave para iniciar la búsqueda.</div>', unsafe_allow_html=True)
-    
-    
 
+    # MOSTRAR ARTÍCULOS (ya sea después de buscar o si ya tenemos artículos en session_state)
+    if st.session_state.search_performed and st.session_state.articles:
+        # Recuperar artículos de session_state
+        articles = st.session_state.articles
+        summarizer = st.session_state.summarizer
+        
+        # Add a divider before articles
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="subtitle">Artículos Encontrados</div>', unsafe_allow_html=True)
+        
+        # Display total articles count
+        st.markdown(f"""
+        <div style="margin-bottom: 1rem; text-align: right; color: {MEDIUM};">
+            Mostrando {len(articles)} artículos | Ordenados por relevancia
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Display summaries
+        for i, article in enumerate(articles):
+            with st.expander(f"{i+1}. {article['title']}"):
+                # Display article metadata
+                st.markdown(f"""
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
+                    <div>Artículo #{i+1}</div>
+                    <div>Fuente: {article['link'].split('/')[2]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display image if available
+                if article.get('image') and article['image'].get('url'):
+                    try:
+                        if article['image']['url'] and article['image']['url'].strip():
+                            img_url = article['image']['url']
+                            img_alt = article['image'].get('alt', article['title'])
+                            
+                            st.markdown(f'''
+                            <div class="image-container">
+                                <img src="{img_url}" alt="{img_alt}" />
+                            </div>
+                            ''', unsafe_allow_html=True)
+                    except Exception as e:
+                        st.markdown('<div class="image-fallback">No se pudo cargar la imagen del artículo.</div>', unsafe_allow_html=True)
+                        print(f"Error cargando imagen: {str(e)}")
+                
+                # Source link with custom styling
+                st.markdown(f"""
+                <div style="margin: 0.8rem 0;">
+                    <span class="label">Enlace original:</span> 
+                    <a href="{article['link']}" target="_blank" class="source-link">{article['link']}</a>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Add a separator line
+                st.markdown('<hr style="margin: 1rem 0; border-color: #eaeaea;">', unsafe_allow_html=True)
+                
+                # Generate summary with spinner
+                with st.spinner("Analizando contenido con IA..."):
+                    summary = summarizer.summarize(article['text'])
+                
+                # Display summary with custom styling
+                st.markdown(f"""
+                <div style="margin: 0.8rem 0;">
+                    <div class="label" style="color: {PRIMARY}; display: flex; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-text" viewBox="0 0 16 16" style="margin-right: 0.5rem;">
+                            <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
+                            <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
+                        </svg>
+                        RESUMEN EJECUTIVO
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f'<div class="summary-section">{summary}</div>', unsafe_allow_html=True)
+
+        # SECCIÓN DE ENVÍO DE CORREO
+        # Add a divider before email section
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="subtitle">Enviar Informe por Correo</div>', unsafe_allow_html=True)
+
+        # Email distribution section
+        st.markdown("""
+        <div style="margin-bottom: 1rem; color: """+MEDIUM+""";">
+            Envíe un informe con estos artículos a uno o varios destinatarios.
+            Ingrese las direcciones de correo electrónico separadas por comas.
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Feedback container para mensajes
+        email_status_container = st.empty()
+        
+        # Mostrar mensaje anterior si existe
+        if st.session_state.email_status:
+            success, message = st.session_state.email_status
+            if success:
+                email_status_container.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
+            else:
+                email_status_container.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+
+        # Email input - usar key para evitar conflictos
+        email_recipients = st.text_area("Destinatarios", 
+                                key="email_recipients_input",
+                                placeholder="ejemplo@empresa.com, gerente@minera.mx", 
+                                help="Ingrese una o varias direcciones de correo separadas por comas")
+
+        # Columnas para el botón
+        send_col1, send_col2 = st.columns([3, 1])
+        with send_col2:
+            # Send button con key única
+            send_email_button = st.button("📧 Enviar Informe", key="send_email_button")
+
+        if send_email_button:
+            if not email_recipients:
+                st.session_state.email_status = (False, "Por favor, ingrese al menos una dirección de correo electrónico.")
+                email_status_container.markdown('<div class="warning-box">⚠️ Por favor, ingrese al menos una dirección de correo electrónico.</div>', unsafe_allow_html=True)
+            else:
+                # Parse email addresses
+                email_list = [email.strip() for email in email_recipients.split(",")]
+                
+                # Send email with progress indicator
+                with st.spinner("Enviando informe por correo electrónico..."):
+                    try:
+                        success, message = send_email_report(email_list, articles, st.session_state.keywords)
+                        st.session_state.email_status = (success, message)
+                        
+                        if success:
+                            email_status_container.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
+                        else:
+                            email_status_container.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+                    except Exception as e:
+                        error_msg = f"Error al enviar el correo: {str(e)}"
+                        st.session_state.email_status = (False, error_msg)
+                        email_status_container.markdown(f'<div class="warning-box">⚠️ {error_msg}</div>', unsafe_allow_html=True)
+                        print(f"Error en el envío de correo: {str(e)}")
+        
+        # Add footer
+        st.markdown("""
+        <div class="footer">
+            <div style="margin-bottom: 0.5rem;">© 2025 Monitor de Noticias Mineras México</div>
+            <div style="font-size: 0.7rem;">Desarrollado con tecnología de procesamiento de lenguaje natural | Datos extraídos de fuentes públicas</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
 if __name__ == "__main__":
     main()
