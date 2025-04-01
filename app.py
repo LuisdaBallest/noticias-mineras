@@ -280,6 +280,12 @@ def deduplicate_articles(articles_list):
     return unique_articles
 
 def main():
+
+    if 'articles' not in st.session_state:
+        st.session_state.articles = []
+    if 'email_sent' not in st.session_state:
+        st.session_state.email_sent = False
+
     # Custom title with HTML
     st.markdown('<div class="main-title">Noticias Mineras México</div>', unsafe_allow_html=True)
     
@@ -407,6 +413,7 @@ def main():
 
                 # Deduplicate articles
                 articles = deduplicate_articles(all_articles)
+                st.session_state.articles = articles  # Guardar en session_state
 
                 # Articles count display with appropriate styling based on count
                 if len(articles) > 0:
@@ -432,6 +439,8 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 else:
+                    if st.session_state.articles:
+                        articles = st.session_state.articles
                     # Add a divider before articles
                     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
                     st.markdown('<div class="subtitle">Artículos Encontrados</div>', unsafe_allow_html=True)
@@ -503,7 +512,6 @@ def main():
                             """, unsafe_allow_html=True)
                             
                             st.markdown(f'<div class="summary-section">{summary}</div>', unsafe_allow_html=True)
-                    # Añade este código después de mostrar los artículos, dentro del if articles:
 
                     # Add a divider before email section
                     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -523,7 +531,9 @@ def main():
                                             help="Ingrese una o varias direcciones de correo separadas por comas")
 
                     # Send button
-                    send_email_button = st.button("📧 Enviar Informe por Correo")
+                    send_col1, send_col2 = st.columns([3, 1])
+                    with send_col2:
+                        send_email_button = st.button("📧 Enviar Informe por Correo", key="send_email_btn")
 
                     if send_email_button:
                         if not email_recipients:
@@ -532,14 +542,21 @@ def main():
                             # Parse email addresses
                             email_list = [email.strip() for email in email_recipients.split(",")]
                             
+                            # Feedback container
+                            email_status = st.empty()
+                            
                             # Send email with progress indicator
                             with st.spinner("Enviando informe por correo electrónico..."):
-                                success, message = send_email_report(email_list, articles, keywords)
-                                
-                            if success:
-                                st.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+                                try:
+                                    success, message = send_email_report(email_list, st.session_state.articles, keywords)
+                                    
+                                    if success:
+                                        email_status.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
+                                    else:
+                                        email_status.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+                                except Exception as e:
+                                    email_status.markdown(f'<div class="warning-box">⚠️ Error al enviar el correo: {str(e)}</div>', unsafe_allow_html=True)
+                                    print(f"Error en el envío de correo: {str(e)}")
 
                                 
                     # Add footer
