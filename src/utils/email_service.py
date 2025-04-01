@@ -113,6 +113,33 @@ def send_email_report(recipient_emails, articles, keywords_text):
                     color: #C99D45;
                     font-weight: bold;
                 }}
+                .article-image {{
+                    width: 100%;
+                    max-height: 250px;
+                    object-fit: cover;
+                    border-radius: 5px;
+                    margin: 10px 0;
+                }}
+                .image-container {{
+                    width: 100%;
+                    height: auto;
+                    max-height: 250px;
+                    overflow: hidden;
+                    border-radius: 5px;
+                    margin: 10px 0;
+                    text-align: center;
+                    background-color: #f8f8f8;
+                    position: relative;
+                }}
+                .no-image {{
+                    padding: 15px;
+                    background-color: #f8f8f8;
+                    text-align: center;
+                    color: #999;
+                    font-style: italic;
+                    border-radius: 5px;
+                    margin: 10px 0;
+                }}
             </style>
         </head>
         <body>
@@ -139,22 +166,60 @@ def send_email_report(recipient_emails, articles, keywords_text):
             try:
                 summary = summarizer.summarize(article['text'])
                 
-                # Añadir el artículo al HTML
-                html_content += f"""
+                # Iniciar el HTML del artículo
+                article_html = f"""
                 <div class="article">
                     <h3>{i+1}. {article['title']}</h3>
+                """
+                
+                # Añadir imagen si está disponible
+                if article.get('image') and article['image'].get('url'):
+                    img_url = article['image']['url']
+                    img_alt = article['image'].get('alt', article['title'])
+                    
+                    # Verificar que la URL de la imagen sea válida
+                    if img_url and img_url.strip():
+                        article_html += f"""
+                        <div class="image-container">
+                            <img src="{img_url}" alt="{img_alt}" class="article-image">
+                        </div>
+                        """
+                
+                # Añadir enlace y resumen
+                article_html += f"""
                     <p><a href="{article['link']}" class="article-link">Ver artículo original</a></p>
                     <div class="summary">
                         <p><span class="highlighted">Resumen:</span> {summary}</p>
                     </div>
                 </div>
                 """
+                
+                # Añadir el artículo al contenido HTML
+                html_content += article_html
+                
             except Exception as e:
                 print(f"Error al procesar artículo para correo: {str(e)}")
                 # Añadir el artículo sin resumen
                 html_content += f"""
                 <div class="article">
                     <h3>{i+1}. {article['title']}</h3>
+                """
+                
+                # Añadir imagen si está disponible (incluso para artículos con error)
+                if article.get('image') and article['image'].get('url'):
+                    img_url = article['image']['url']
+                    img_alt = article['image'].get('alt', article['title'])
+                    
+                    # Verificar que la URL de la imagen sea válida
+                    if img_url and img_url.strip():
+                        html_content += f"""
+                        <div class="image-container">
+                            <img src="{img_url}" alt="{img_alt}" class="article-image">
+                        </div>
+                        """
+                
+                # Completar el HTML del artículo
+                html_content += f"""
                     <p><a href="{article['link']}" class="article-link">Ver artículo original</a></p>
                     <div class="summary">
                         <p><span class="highlighted">Nota:</span> No se pudo generar un resumen para este artículo.</p>
