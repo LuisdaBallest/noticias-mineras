@@ -503,56 +503,57 @@ def main():
                             """, unsafe_allow_html=True)
                             
                             st.markdown(f'<div class="summary-section">{summary}</div>', unsafe_allow_html=True)
+                    # Añade este código después de mostrar los artículos, dentro del if articles:
+
+                    # Add a divider before email section
+                    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="subtitle">Enviar Informe por Correo</div>', unsafe_allow_html=True)
+
+                    # Email distribution section
+                    st.markdown("""
+                    <div style="margin-bottom: 1rem; color: """+MEDIUM+""";">
+                        Envíe un informe con estos artículos a uno o varios destinatarios.
+                        Ingrese las direcciones de correo electrónico separadas por comas.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # Email input
+                    email_recipients = st.text_area("Destinatarios", 
+                                            placeholder="ejemplo@empresa.com, gerente@minera.mx", 
+                                            help="Ingrese una o varias direcciones de correo separadas por comas")
+
+                    # Send button
+                    send_email_button = st.button("📧 Enviar Informe por Correo")
+
+                    if send_email_button:
+                        if not email_recipients:
+                            st.markdown('<div class="warning-box">⚠️ Por favor, ingrese al menos una dirección de correo electrónico.</div>', unsafe_allow_html=True)
+                        else:
+                            # Parse email addresses
+                            email_list = [email.strip() for email in email_recipients.split(",")]
+                            
+                            # Send email with progress indicator
+                            with st.spinner("Enviando informe por correo electrónico..."):
+                                success, message = send_email_report(email_list, articles, keywords)
+                                
+                            if success:
+                                st.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+
+                                
+                    # Add footer
+                    st.markdown("""
+                    <div class="footer">
+                        <div style="margin-bottom: 0.5rem;">© 2025 Monitor de Noticias Mineras México</div>
+                        <div style="font-size: 0.7rem;">Desarrollado con tecnología de procesamiento de lenguaje natural | Datos extraídos de fuentes públicas</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                             
         else:
             st.markdown('<div class="warning-box">⚠️ Por favor ingresa al menos una palabra clave para iniciar la búsqueda.</div>', unsafe_allow_html=True)
     
-    # Añade este código después de mostrar los artículos, dentro del if articles:
-
-    # Add a divider before email section
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Enviar Informe por Correo</div>', unsafe_allow_html=True)
-
-    # Email distribution section
-    st.markdown("""
-    <div style="margin-bottom: 1rem; color: """+MEDIUM+""";">
-        Envíe un informe con estos artículos a uno o varios destinatarios.
-        Ingrese las direcciones de correo electrónico separadas por comas.
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Email input
-    email_recipients = st.text_area("Destinatarios", 
-                            placeholder="ejemplo@empresa.com, gerente@minera.mx", 
-                            help="Ingrese una o varias direcciones de correo separadas por comas")
-
-    # Send button
-    send_email_button = st.button("📧 Enviar Informe por Correo")
-
-    if send_email_button:
-        if not email_recipients:
-            st.markdown('<div class="warning-box">⚠️ Por favor, ingrese al menos una dirección de correo electrónico.</div>', unsafe_allow_html=True)
-        else:
-            # Parse email addresses
-            email_list = [email.strip() for email in email_recipients.split(",")]
-            
-            # Send email with progress indicator
-            with st.spinner("Enviando informe por correo electrónico..."):
-                success, message = send_email_report(email_list, articles, keywords)
-                
-            if success:
-                st.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
-
-                
-    # Add footer
-    st.markdown("""
-    <div class="footer">
-        <div style="margin-bottom: 0.5rem;">© 2025 Monitor de Noticias Mineras México</div>
-        <div style="font-size: 0.7rem;">Desarrollado con tecnología de procesamiento de lenguaje natural | Datos extraídos de fuentes públicas</div>
-    </div>
-    """, unsafe_allow_html=True)
+    
 
 if __name__ == "__main__":
     main()
