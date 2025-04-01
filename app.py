@@ -450,20 +450,41 @@ def main():
             Mostrando {len(articles)} artículos | Ordenados por relevancia
         </div>
         """, unsafe_allow_html=True)
-        
+
+
+        # Diagnóstico de fechas
+        print("Diagnóstico de fechas en artículos:")
+        for i, article in enumerate(articles[:3]):  # Revisar solo los primeros 3 para no llenar la consola
+            print(f"Artículo #{i+1}: {article['title']}")
+            print(f"  - date: {article.get('date', 'NO EXISTE')}")
+            print(f"  - formatted_date: {article.get('formatted_date', 'NO EXISTE')}")
+            print(f"  - Claves disponibles: {list(article.keys())}")
+            
         # Display summaries
         for i, article in enumerate(articles):
             with st.expander(f"{i+1}. {article['title']}"):
-                # Display article metadata
+                
                 fecha_display = article.get('formatted_date', article.get('date', ''))
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
-                    <div>Artículo #{i+1}</div>
-                    <div>
-                        {fecha_display} | Fuente: {article['link'].split('/')[2]}
+                if not fecha_display and 'link' in article:
+                    # Fallback: si no hay fecha, mostrar solo la fuente
+                    source_display = f"Fuente: {article['link'].split('/')[2]}" if '/' in article['link'] else "Fuente: Desconocida"
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
+                        <div>Artículo #{i+1}</div>
+                        <div>{source_display}</div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+                else:
+                    # Si hay fecha, mostrar fecha y fuente
+                    source_display = f"Fuente: {article['link'].split('/')[2]}" if '/' in article['link'] else "Fuente: Desconocida"
+                    st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
+                        <div>Artículo #{i+1}</div>
+                        <div>
+                            <span style="font-weight: bold; color: {PRIMARY};">{fecha_display}</span> | {source_display}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 # Display image if available
                 if article.get('image') and article['image'].get('url'):
