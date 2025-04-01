@@ -153,8 +153,6 @@ def send_email_report(recipient_emails, articles, keywords_text):
                     <p>A continuación se presenta un resumen de las últimas noticias relevantes para el sector minero en México, 
                     basado en la búsqueda de los siguientes términos:</p>
                     
-                    <div class="keywords">{keywords_text}</div>
-                    
                     <h2>Artículos Encontrados ({len(articles)})</h2>
         """
         
