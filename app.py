@@ -6,26 +6,27 @@ from src.scrapers.website_three_scraper import WebsiteThreeScraper
 from src.scrapers.website_four_scraper import WebsiteFourScraper
 from src.summarizer.openai_summarizer import OpenAISummarizer
 import concurrent.futures
+from src.utils.email_service import send_email_report
 
 st.set_page_config(
     page_title="Noticias Mineras México",
-    page_icon="📰",  # Puedes usar un emoji o una ruta a un archivo de imagen
+    page_icon="📰",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
 
 
-# Define professional color palette
-PRIMARY = "#fc6603"    # Deep blue
-SECONDARY = "#C99D45"    # Gold metallic accent
-DARK = "#303030"         # Dark gray almost black
-MEDIUM = "#6C757D"       # Medium gray
-LIGHT = "#F5F5F5"        # Light gray/white
-ACCENT = "#BF7930"       # Copper tone
+# Colores
+PRIMARY = "#fc6603"    # Naranja
+SECONDARY = "#C99D45"    # Oro
+DARK = "#303030"         # Casi negro
+MEDIUM = "#6C757D"       # Gris
+LIGHT = "#F5F5F5"        # Gris claro
+ACCENT = "#BF7930"       # Cobre
 
 # Define default keywords - hardcoded for consistency
-DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, acero, aluminio, cemento, cementera, cantera, canteras, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, komatsu, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician, Minera México, Peñoles, Coeur, First Majestic, Fresnillo, Newmont, Goldcorp, Pan American, Panamericana, Argonaut, Frisco, Endeavour, colorada, chispas, filos, gatos, san julian, palmarejo, parral, santa elena, tayoltita, saucito, san dimas, san francisco, san josé, san luis, san martin, san nicolas, san patricio, san rafael, san vicente, santa cruz, santa maria, santa rosa, santa rita, media luna, Torex, Pinnacle, Silver Wolf, copalquin, Bear Creek, mercedes, cananea, aumenta, aumentar, aumentará, aumentan, aumentó, durango, nuevo"
+DEFAULT_KEYWORDS = "oro, cobre, plata, zinc, litio, abrir, acero, aluminio, cemento, cementera, cantera, canteras, apertura, inaugurar, inauguración, inauguran, inaugura, inauguro, cerrar, cierre, cierran, clausurar, clausura, clausuran, clausuro, clausurado, clausurada, quiebra, bancarrota, crecimiento, incremento, crece, incrementa, disminuye, reduce, reducen, disminución, reducción, Sandvik, sandvik, CAT, Caterpillar, komatsu, expandir, expansión, expande, expanden, expandirse, comienza, comenzar, inicia, inician, Minera México, Peñoles, Coeur, First Majestic, Fresnillo, Newmont, Goldcorp, Pan American, Panamericana, Argonaut, Frisco, Endeavour, colorada, chispas, filos, gatos, san julian, palmarejo, parral, santa elena, tayoltita, saucito, san dimas, san francisco, san josé, san luis, san martin, san nicolas, san patricio, san rafael, san vicente, santa cruz, santa maria, santa rosa, santa rita, media luna, Torex, Pinnacle, Silver Wolf, copalquin, Bear Creek, mercedes, cananea, aumenta, aumentar, aumentará, aumentan, aumentó, durango, nuevo"
 
 # Define keyword tags to display (can be the same as DEFAULT_KEYWORDS but split into a list)
 KEYWORD_TAGS = ["minería", "oro", "plata", "cobre", "proyecto", "exploración", "inversión"]
@@ -506,6 +507,45 @@ def main():
         else:
             st.markdown('<div class="warning-box">⚠️ Por favor ingresa al menos una palabra clave para iniciar la búsqueda.</div>', unsafe_allow_html=True)
     
+    # Añade este código después de mostrar los artículos, dentro del if articles:
+
+    # Add a divider before email section
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Enviar Informe por Correo</div>', unsafe_allow_html=True)
+
+    # Email distribution section
+    st.markdown("""
+    <div style="margin-bottom: 1rem; color: """+MEDIUM+""";">
+        Envíe un informe con estos artículos a uno o varios destinatarios.
+        Ingrese las direcciones de correo electrónico separadas por comas.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Email input
+    email_recipients = st.text_area("Destinatarios", 
+                            placeholder="ejemplo@empresa.com, gerente@minera.mx", 
+                            help="Ingrese una o varias direcciones de correo separadas por comas")
+
+    # Send button
+    send_email_button = st.button("📧 Enviar Informe por Correo")
+
+    if send_email_button:
+        if not email_recipients:
+            st.markdown('<div class="warning-box">⚠️ Por favor, ingrese al menos una dirección de correo electrónico.</div>', unsafe_allow_html=True)
+        else:
+            # Parse email addresses
+            email_list = [email.strip() for email in email_recipients.split(",")]
+            
+            # Send email with progress indicator
+            with st.spinner("Enviando informe por correo electrónico..."):
+                success, message = send_email_report(email_list, articles, keywords)
+                
+            if success:
+                st.markdown(f'<div class="success-box">✅ {message}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="warning-box">⚠️ {message}</div>', unsafe_allow_html=True)
+
+                
     # Add footer
     st.markdown("""
     <div class="footer">
