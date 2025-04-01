@@ -306,8 +306,6 @@ def main():
     # Explain how to use keywords
     st.markdown("""
     <div style="margin-bottom: 0.8rem; color: """+MEDIUM+""";">
-        Ingrese términos relacionados con la minería separados por comas para encontrar artículos relevantes.
-    
     """, unsafe_allow_html=True)
     
     # Show keyword examples as tags
