@@ -146,21 +146,20 @@ def send_email_report(recipient_emails, articles, keywords_text):
             <div class="container">
                 <div class="header">
                     <h1>Noticias Mineras México</h1>
-                    <p>Informe automático generado el {today_date}</p>
+                    <p>Informe generado el {today_date}</p>
                 </div>
                 <div class="content">
-                    <p>Estimado/a,</p>
-                    <p>A continuación se presenta un resumen de las últimas noticias relevantes para el sector minero en México, 
-                    basado en la búsqueda de los siguientes términos:</p>
+                    <p>A continuación se presenta un resumen de las últimas noticias relevantes para el sector minero en México: </p>
                     
-                    <h2>Artículos Encontrados ({len(articles)})</h2>
+                    <h2>Artículos ({len(articles)})</h2>
+                    <p> Solo se mostrarán los primeros 15</p
         """
         
         # Crear el objeto summarizer
         summarizer = OpenAISummarizer()
         
         # Añadir artículos (máximo 10 para no hacer el correo demasiado grande)
-        for i, article in enumerate(articles[:10]):
+        for i, article in enumerate(articles[:20]):
             try:
                 summary = summarizer.summarize(article['text'])
                 
