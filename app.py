@@ -455,10 +455,13 @@ def main():
         for i, article in enumerate(articles):
             with st.expander(f"{i+1}. {article['title']}"):
                 # Display article metadata
+                fecha_display = article.get('formatted_date', article.get('date', ''))
                 st.markdown(f"""
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: {MEDIUM};">
                     <div>Artículo #{i+1}</div>
-                    <div>Fuente: {article['link'].split('/')[2]}</div>
+                    <div>
+                        {fecha_display} | Fuente: {article['link'].split('/')[2]}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 

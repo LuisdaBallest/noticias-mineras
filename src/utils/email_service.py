@@ -183,6 +183,19 @@ def send_email_report(recipient_emails, articles, keywords_text):
                         </div>
                         """
                 
+                fecha_display = article.get('formatted_date', article.get('date', ''))
+                if fecha_display:
+                    article_html += f"""
+                    <h3>{i+1}. {article['title']}</h3>
+                    <p style="margin-top: -5px; font-size: 0.85em; color: #666;">
+                        <em>Publicado: {fecha_display}</em>
+                    </p>
+                    """
+                else:
+                    article_html += f"""
+                    <h3>{i+1}. {article['title']}</h3>
+                    """
+                
                 # Añadir enlace y resumen
                 article_html += f"""
                     <p><a href="{article['link']}" class="article-link">Ver artículo original</a></p>

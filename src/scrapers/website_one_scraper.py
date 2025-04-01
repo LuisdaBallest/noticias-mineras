@@ -102,6 +102,36 @@ class WebsiteOneScraper(Scraper):
                 # Extract the featured image
                 image = self.extract_image(article_soup, link)
                 
+                # Extract the publication date
+                published_date = ""
+                formatted_date = ""
+                
+                # Intentar diferentes selectores para la fecha
+                date_selectors = [
+                    ('time.entry-date.published', 'datetime'),
+                    ('time.entry-date', 'datetime'),
+                    ('.post-date', 'text'),
+                    ('.meta-date', 'text'),
+                    ('span.date', 'text')
+                ]
+                
+                for selector, attr_type in date_selectors:
+                    date_element = article_soup.select_one(selector)
+                    if date_element:
+                        if attr_type == 'datetime' and date_element.has_attr('datetime'):
+                            published_date = date_element['datetime']
+                            # Intentar formatear fecha ISO
+                            try:
+                                from datetime import datetime
+                                date_obj = datetime.fromisoformat(published_date.replace('Z', '+00:00'))
+                                formatted_date = date_obj.strftime("%d/%m/%Y")
+                            except:
+                                formatted_date = date_element.text.strip()
+                        else:
+                            published_date = date_element.text.strip()
+                            formatted_date = published_date
+                        break
+                
                 # Get the content (adjust the selector based on actual HTML)
                 content_element = article_soup.find('div', class_='entry-content')
                 text = content_element.get_text(strip=True) if content_element else ""
@@ -110,7 +140,9 @@ class WebsiteOneScraper(Scraper):
                     'title': title,
                     'link': link,
                     'text': text,
-                    'image': image
+                    'image': image,
+                    'date': published_date,  # Fecha original
+                    'formatted_date': formatted_date  # Fecha formateada para mostrar
                 })
             except Exception as e:
                 print(f"Error parsing article: {e}")

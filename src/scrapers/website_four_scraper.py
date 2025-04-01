@@ -122,6 +122,170 @@ class WebsiteFourScraper(Scraper):
             'alt': image_alt
         }
 
+    def extract_date(self, soup):
+        """
+        Extract publication date from RumboMinero article
+        The date is in a span with class="td-post-date" containing a time element with datetime attribute
+        """
+        date_text = ""
+        formatted_date = ""
+        
+        try:
+            # Primer intento: buscar el selector específico de RumboMinero
+            date_span = soup.select_one('span.td-post-date')
+            if date_span:
+                print("Found td-post-date span")
+                
+                # Buscar el elemento time dentro del span
+                time_element = date_span.find('time')
+                if time_element and time_element.has_attr('datetime'):
+                    date_text = time_element['datetime']
+                    print(f"Found datetime attribute: {date_text}")
+                    
+                    # También podemos usar el texto visible
+                    visible_date = time_element.get_text(strip=True)
+                    if visible_date:
+                        print(f"Visible date text: {visible_date}")
+            
+            # Segundo intento: buscar cualquier elemento time con datetime
+            if not date_text:
+                time_element = soup.find('time')
+                if time_element and time_element.has_attr('datetime'):
+                    date_text = time_element['datetime']
+                    print(f"Found datetime from generic time element: {date_text}")
+            
+            # Tercer intento: buscar otros selectores comunes
+            if not date_text:
+                date_selectors = [
+                    '.td-post-date',
+                    '.post-date',
+                    '.entry-date',
+                    '.meta-date',
+                    'span.date',
+                    'meta[property="article:published_time"]'
+                ]
+                
+                for selector in date_selectors:
+                    date_element = soup.select_one(selector)
+                    if date_element:
+                        if selector.startswith('meta'):
+                            date_text = date_element.get('content', '')
+                        else:
+                            date_text = date_element.get_text(strip=True)
+                        print(f"Found date with alternate selector '{selector}': {date_text}")
+                        break
+            
+            # Formatear la fecha para mostrarla consistentemente
+            if date_text:
+                try:
+                    # Si tenemos formato ISO (común en atributo datetime)
+                    if 'T' in date_text:
+                        from datetime import datetime
+                        
+                        # Manejar múltiples formatos ISO posibles
+                        iso_formats = [
+                            "%Y-%m-%dT%H:%M:%S%z",  # Con zona horaria formato +0000
+                            "%Y-%m-%dT%H:%M:%S.%f%z",  # Con microsegundos y zona horaria
+                            "%Y-%m-%dT%H:%M:%S",  # Sin zona horaria
+                            "%Y-%m-%dT%H:%M:%S.%f"  # Con microsegundos sin zona horaria
+                        ]
+                        
+                        # Limpiar y normalizar el formato
+                        cleaned_date = date_text.strip()
+                        if cleaned_date.endswith('Z'):
+                            cleaned_date = cleaned_date.replace('Z', '+00:00')
+                        
+                        # Para compatibilidad con formatos de Python < 3.7 que no manejan el ':' en el offset
+                        if '+' in cleaned_date and ':' in cleaned_date.split('+')[1]:
+                            parts = cleaned_date.split('+')
+                            offset = parts[1].replace(':', '')
+                            cleaned_date = f"{parts[0]}+{offset}"
+                        
+                        # Intentar diferentes formatos
+                        date_obj = None
+                        for fmt in iso_formats:
+                            try:
+                                date_obj = datetime.strptime(cleaned_date, fmt)
+                                break
+                            except ValueError:
+                                continue
+                        
+                        if date_obj:
+                            formatted_date = date_obj.strftime("%d/%m/%Y")
+                        else:
+                            # Intentar formato simple de fecha
+                            date_obj = datetime.strptime(cleaned_date.split('T')[0], "%Y-%m-%d")
+                            formatted_date = date_obj.strftime("%d/%m/%Y")
+                    else:
+                        # Intentar formatos comunes en español
+                        import re
+                        from datetime import datetime
+                        
+                        # Patrones comunes
+                        patterns = [
+                            r'(\d{1,2})\s+de\s+([a-zé]+)(?:\s+de)?\s+(\d{4})',  # "15 de abril de 2023"
+                            r'(\d{1,2})\s+([a-zé]+)\s+(\d{4})',                 # "15 abril 2023"
+                            r'(\d{1,2})/(\d{1,2})/(\d{4})',                     # "15/04/2023"
+                            r'(\d{4})-(\d{1,2})-(\d{1,2})'                      # "2023-04-15"
+                        ]
+                        
+                        date_match = None
+                        matched_pattern = None
+                        
+                        for pattern in patterns:
+                            match = re.search(pattern, date_text.lower())
+                            if match:
+                                date_match = match.groups()
+                                matched_pattern = pattern
+                                break
+                        
+                        if date_match:
+                            if matched_pattern == patterns[0] or matched_pattern == patterns[1]:
+                                # Convertir nombre del mes en español al número
+                                month_names = {
+                                    'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 
+                                    'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8, 
+                                    'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+                                }
+                                
+                                day = int(date_match[0])
+                                month = month_names.get(date_match[1].lower(), 1)  # Valor por defecto 1 si no se encuentra
+                                year = int(date_match[2])
+                                
+                                date_obj = datetime(year, month, day)
+                                formatted_date = date_obj.strftime("%d/%m/%Y")
+                            elif matched_pattern == patterns[2]:
+                                # Formato "15/04/2023"
+                                day = int(date_match[0])
+                                month = int(date_match[1])
+                                year = int(date_match[2])
+                                
+                                date_obj = datetime(year, month, day)
+                                formatted_date = date_obj.strftime("%d/%m/%Y")
+                            elif matched_pattern == patterns[3]:
+                                # Formato "2023-04-15"
+                                year = int(date_match[0])
+                                month = int(date_match[1])
+                                day = int(date_match[2])
+                                
+                                date_obj = datetime(year, month, day)
+                                formatted_date = date_obj.strftime("%d/%m/%Y")
+                            else:
+                                formatted_date = date_text
+                        else:
+                            formatted_date = date_text
+                except Exception as e:
+                    print(f"Error formatting date: {e}")
+                    formatted_date = date_text
+        
+        except Exception as e:
+            print(f"Error extracting date: {e}")
+        
+        return {
+            'raw': date_text,
+            'formatted': formatted_date
+        }
+
     def parse_articles(self, html_content):
         if not html_content:
             print("No HTML content retrieved from RumboMinero.com")
@@ -242,12 +406,16 @@ class WebsiteFourScraper(Scraper):
                     else:
                         print(f"Could not find content for: {title}")
                     
+                    date_info = self.extract_date(article_soup)
+
                     # Añadir el artículo a nuestra lista
                     articles.append({
                         'title': title,
                         'link': link,
                         'text': text,
-                        'image': image
+                        'image': image,
+                        'date': date_info['raw'],
+                        'formatted_date': date_info['formatted']
                     })
                     print(f"Successfully added article: {title}")
                 else:
@@ -341,12 +509,16 @@ class WebsiteFourScraper(Scraper):
                             else:
                                 print(f"Could not find content for: {title}")
                             
+                            date_info = self.extract_date(article_soup)
+
                             # Añadir el artículo a nuestra lista
                             articles.append({
                                 'title': title,
-                                'link': href,
+                                'link': link,
                                 'text': text,
-                                'image': image
+                                'image': image,
+                                'date': date_info['raw'],
+                                'formatted_date': date_info['formatted']
                             })
                             print(f"Successfully added article (strategy 2): {title}")
                     except Exception as e:
