@@ -131,37 +131,96 @@ class WebsiteThreeScraper(Scraper):
     def extract_date(self, soup):
         """
         Extract publication date from Promineria article
-        The date is in a div with class="info" and typically inside an <a> tag
+        The date is in a text node directly inside div.info, specifically located at:
+        /html/body/div[3]/div[1]/div[1]/div[1]/div[1]/text()
         """
         date_text = ""
         formatted_date = ""
         
         try:
-            # Buscar el div con class="info"
+            # Buscar el div con class="info" - este es el contenedor principal
             info_div = soup.find('div', class_='info')
             if info_div:
                 print("Found info div for date extraction")
                 
-                # Primero intentamos buscar un enlace dentro del div info
-                date_link = info_div.find('a')
-                if date_link:
-                    date_text = date_link.get_text(strip=True)
-                    print(f"Found date in link: {date_text}")
+                # Extraer todos los nodos de texto directos del div.info
+                # Ya que la fecha está en un nodo de texto después de un <a>, no dentro de una etiqueta
+                for content in info_div.contents:
+                    # Los nodos de texto son NavigableString en BeautifulSoup
+                    if isinstance(content, str) and content.strip():
+                        potential_date = content.strip()
+                        print(f"Found potential date text: '{potential_date}'")
+                        
+                        # Verificar si este texto tiene el formato esperado de fecha
+                        import re
+                        date_match = re.search(r'\b\d{1,2}\s+de\s+[a-zé]+(?:\s+de)?\s+\d{4}\b', potential_date, re.IGNORECASE)
+                        if date_match:
+                            date_text = date_match.group(0)
+                            print(f"✅ Extracted date from text node: '{date_text}'")
+                            break
                 
-                # Si no hay enlace o está vacío, intentamos extraer texto directamente del div
+                # Si no encontramos la fecha en los nodos de texto directos
                 if not date_text:
-                    date_text = info_div.get_text(strip=True)
-                    print(f"Extracted date text from div: {date_text}")
+                    # Obtener todo el texto del div y buscar patrones de fecha
+                    full_text = info_div.get_text(strip=True)
+                    print(f"Full text in info div: '{full_text}'")
                     
-                    # A veces el div contiene múltiples piezas de información
-                    # Intentamos extraer solo la parte de la fecha con un regex
-                    import re
-                    date_match = re.search(r'\b\d{1,2}\s+de\s+[a-zé]+(?:\s+de)?\s+\d{4}\b', date_text, re.IGNORECASE)
-                    if date_match:
-                        date_text = date_match.group(0)
-                        print(f"Extracted specific date part: {date_text}")
+                    # Buscar patrones de fecha en el texto completo
+                    date_patterns = [
+                        r'\b\d{1,2}\s+de\s+[a-zé]+(?:\s+de)?\s+\d{4}\b',  # "15 de abril de 2023"
+                        r'\b\d{1,2}/\d{1,2}/\d{4}\b',                     # "15/04/2023"
+                        r'\b\d{4}-\d{1,2}-\d{1,2}\b'                      # "2023-04-15"
+                    ]
+                    
+                    for pattern in date_patterns:
+                        match = re.search(pattern, full_text, re.IGNORECASE)
+                        if match:
+                            date_text = match.group(0)
+                            print(f"✅ Extracted date using pattern: '{date_text}'")
+                            break
             
-            # Si no encontramos la fecha en el div.info, intentamos otros selectores comunes
+            # Si aún no tenemos fecha, intentar aproximación específica de XPath
+            if not date_text:
+                print("Trying alternative approach with XPath-like navigation")
+                
+                # Intentar aproximar la ubicación XPath: /html/body/div[3]/div[1]/div[1]/div[1]/div[1]/text()
+                # Esto es aproximado ya que BeautifulSoup no tiene XPath directo como lxml
+                
+                # Primero tratamos de encontrar la estructura principal
+                body = soup.find('body')
+                if body:
+                    # Buscamos el tercer div que sea hijo directo del body
+                    main_divs = body.find_all('div', recursive=False)
+                    if len(main_divs) >= 3:
+                        target_div = main_divs[2]  # div[3] en XPath es el tercer elemento (índice 2 en Python)
+                        
+                        # Ahora navegamos hacia abajo: div[1]/div[1]/div[1]/div[1]
+                        current = target_div
+                        for _ in range(4):  # Navegar 4 niveles hacia abajo
+                            child_divs = current.find_all('div', recursive=False)
+                            if child_divs:
+                                current = child_divs[0]  # Primer div hijo en cada nivel
+                            else:
+                                break
+                        
+                        # Extraer nodos de texto directos
+                        for content in current.contents:
+                            if isinstance(content, str) and content.strip():
+                                potential_date = content.strip()
+                                print(f"Found text at target XPath location: '{potential_date}'")
+                                
+                                # Verificar si este texto tiene formato de fecha
+                                for pattern in date_patterns:
+                                    match = re.search(pattern, potential_date, re.IGNORECASE)
+                                    if match:
+                                        date_text = match.group(0)
+                                        print(f"✅ Extracted date from XPath location: '{date_text}'")
+                                        break
+                                
+                                if date_text:  # Si encontramos la fecha, salimos
+                                    break
+            
+            # Si todavía no tenemos fecha, intentar otros selectores comunes
             if not date_text:
                 date_selectors = [
                     '.fecha',
@@ -182,8 +241,8 @@ class WebsiteThreeScraper(Scraper):
                             date_text = date_element.get_text(strip=True)
                         print(f"Found date with alternate selector '{selector}': {date_text}")
                         break
-                
-            # Intentar formatear la fecha para mostrarla consistentemente
+            
+            # Formatear la fecha para mostrarla consistentemente
             if date_text:
                 try:
                     # Formato común en español: "15 de abril de 2023" o "15 abril 2023"
