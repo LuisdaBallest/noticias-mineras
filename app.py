@@ -307,7 +307,7 @@ def main():
     st.markdown("""
     <div style="margin-bottom: 0.8rem; color: """+MEDIUM+""";">
         Ingrese términos relacionados con la minería separados por comas para encontrar artículos relevantes.
-    </div>
+    
     """, unsafe_allow_html=True)
     
     # Show keyword examples as tags
@@ -576,6 +576,6 @@ def main():
             <div style="font-size: 0.7rem;">Desarrollado con tecnología de procesamiento de lenguaje natural | Datos extraídos de fuentes públicas</div>
         </div>
         """, unsafe_allow_html=True)
-        
+
 if __name__ == "__main__":
     main()
