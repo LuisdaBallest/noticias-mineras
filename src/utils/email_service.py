@@ -152,7 +152,7 @@ def send_email_report(recipient_emails, articles, keywords_text):
                     <p>A continuación se presenta un resumen de las últimas noticias relevantes para el sector minero en México: </p>
                     
                     <h2>Artículos ({len(articles)})</h2>
-                    <p> Solo se mostrarán los primeros 15</p
+                    <p> Solo se mostrarán los primeros 20</p
         """
         
         # Crear el objeto summarizer
