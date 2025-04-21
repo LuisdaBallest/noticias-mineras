@@ -123,31 +123,62 @@ class WebsiteTwoScraper(Scraper):
         date_text = ""
         formatted_date = ""
         
-        # Lista de selectores para fecha específicos para MundoMinero
-        date_selectors = [
-            'span.tt-post-date',          # MundoMinero específico
-            '.tt-post-date',              # Alternativa para MundoMinero
-            'time.entry-date.published',  # WordPress común
-            'span.date',                  # Formato genérico
-            '.post-date',                 # Otro formato común
-            '.meta-date',                 # Otro formato común
-        ]
-        
-        for selector in date_selectors:
-            date_element = soup.select_one(selector)
-            if date_element:
-                date_text = date_element.get_text(strip=True)
-                print(f"Found date with selector '{selector}': {date_text}")
-                
-                # Intentar formatear la fecha
+        try:
+            # Lista de selectores para fecha específicos para MundoMinero
+            date_selectors = [
+                'span.tt-post-date',          # MundoMinero específico
+                '.tt-post-date',              # Alternativa para MundoMinero
+                'div.tt-post-label span.tt-post-date',  # Ruta más específica
+                'time.entry-date.published',  # WordPress común
+                'span.date',                  # Formato genérico
+                '.post-date',                 # Otro formato común
+                '.meta-date',                 # Otro formato común
+            ]
+            
+            for selector in date_selectors:
+                date_element = soup.select_one(selector)
+                if date_element:
+                    date_text = date_element.get_text(strip=True)
+                    print(f"Found date with selector '{selector}': {date_text}")
+                    break
+            
+            # Si no encontramos la fecha con los selectores, intentamos buscarla dentro del div.tt-post-label
+            if not date_text:
+                post_label = soup.find('div', class_='tt-post-label')
+                if post_label:
+                    # Buscar directamente el span con clase tt-post-date
+                    date_span = post_label.find('span', class_='tt-post-date')
+                    if date_span:
+                        date_text = date_span.get_text(strip=True)
+                        print(f"Found date in tt-post-label div: {date_text}")
+                    
+                    # Si no encontramos el span específico, buscar cualquier texto que parezca una fecha
+                    if not date_text:
+                        # Buscar todos los spans dentro de tt-post-label
+                        spans = post_label.find_all('span')
+                        for span in spans:
+                            span_text = span.get_text(strip=True)
+                            # Verificar si contiene un mes o un número que podría ser una fecha
+                            month_patterns = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                                            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+                            if any(month in span_text.lower() for month in month_patterns) or re.search(r'\d{1,2}[,\s]+\d{4}', span_text):
+                                date_text = span_text
+                                print(f"Found potential date in span: {date_text}")
+                                break
+            
+            # Intentar formatear la fecha para mostrarla consistentemente
+            if date_text:
                 try:
-                    # Formato común en español: "15 de abril, 2023" o "15 abril 2023"
+                    # Añadir patrón para formato "abril 14, 2025" (mes día, año)
                     import re
                     from datetime import datetime
                     
-                    # Intentar extraer día, mes y año usando regex
                     # Patrones comunes en español
                     patterns = [
+                        # Nuevo patrón para "abril 14, 2025"
+                        r'([a-zé]+)\s+(\d{1,2})[,\s]+(\d{4})',  # "abril 14, 2025" o "abril 14 2025"
+                        
+                        # Patrones existentes
                         r'(\d{1,2})\s+de\s+([a-zé]+),?\s+(\d{4})',  # "15 de abril, 2023"
                         r'(\d{1,2})\s+([a-zé]+)\s+(\d{4})',         # "15 abril 2023"
                         r'(\d{1,2})/(\d{1,2})/(\d{4})',             # "15/04/2023"
@@ -157,51 +188,51 @@ class WebsiteTwoScraper(Scraper):
                     date_match = None
                     matched_pattern = None
                     
-                    for pattern in patterns:
+                    for i, pattern in enumerate(patterns):
                         match = re.search(pattern, date_text.lower())
                         if match:
                             date_match = match.groups()
-                            matched_pattern = pattern
+                            matched_pattern = i
                             break
                     
                     if date_match:
-                        if matched_pattern == patterns[0] or matched_pattern == patterns[1]:
-                            # Convertir nombre del mes en español al número
-                            month_names = {
-                                'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 
-                                'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8, 
-                                'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
-                            }
-                            
-                            day = int(date_match[0])
-                            month = month_names.get(date_match[1].lower(), 1)  # Valor por defecto 1 si no se encuentra
+                        # Convertir nombre del mes en español al número
+                        month_names = {
+                            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 
+                            'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8, 
+                            'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+                        }
+                        
+                        if matched_pattern == 0:  # "abril 14, 2025"
+                            month = month_names.get(date_match[0].lower(), 1)
+                            day = int(date_match[1])
                             year = int(date_match[2])
-                            
-                            date_obj = datetime(year, month, day)
-                            formatted_date = date_obj.strftime("%d/%m/%Y")
-                        elif matched_pattern == patterns[2]:
-                            # Formato "15/04/2023"
+                        elif matched_pattern == 1 or matched_pattern == 2:  # "15 de abril, 2023" o "15 abril 2023"
+                            day = int(date_match[0])
+                            month = month_names.get(date_match[1].lower(), 1)
+                            year = int(date_match[2])
+                        elif matched_pattern == 3:  # "15/04/2023"
                             day = int(date_match[0])
                             month = int(date_match[1])
                             year = int(date_match[2])
-                            
-                            date_obj = datetime(year, month, day)
-                            formatted_date = date_obj.strftime("%d/%m/%Y")
-                        elif matched_pattern == patterns[3]:
-                            # Formato "2023-04-15"
+                        elif matched_pattern == 4:  # "2023-04-15"
                             year = int(date_match[0])
                             month = int(date_match[1])
                             day = int(date_match[2])
-                            
-                            date_obj = datetime(year, month, day)
-                            formatted_date = date_obj.strftime("%d/%m/%Y")
+                        
+                        # Crear objeto datetime y formato consistente
+                        date_obj = datetime(year, month, day)
+                        formatted_date = date_obj.strftime("%d/%m/%Y")
+                        print(f"Successfully formatted date: {formatted_date}")
                     else:
+                        # Si no se pudo extraer con regex, usar el texto original
                         formatted_date = date_text
+                        print(f"Could not parse date format, using original: {formatted_date}")
                 except Exception as e:
                     print(f"Error formatting date: {e}")
                     formatted_date = date_text
-                    
-                break
+        except Exception as e:
+            print(f"Error in extract_date: {e}")
         
         return {
             'raw': date_text,
