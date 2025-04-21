@@ -117,14 +117,49 @@ class WebsiteTwoScraper(Scraper):
             'alt': image_alt
         }
 
-    # Añade esta función nueva después del método extract_image
     def extract_date(self, soup):
         """Extract publication date from article"""
         date_text = ""
         formatted_date = ""
         
         try:
-            # Lista de selectores para fecha específicos para MundoMinero
+            # Buscar exactamente la estructura que mencionas (caso específico de MundoMinero)
+            post_label = soup.find('div', class_='tt-post-label')
+            if post_label:
+                date_span = post_label.find('span', class_='tt-post-date')
+                if date_span:
+                    date_text = date_span.get_text(strip=True)
+                    print(f"Found date in exact structure: {date_text}")
+                    
+                    # Para fechas como "abril 14, 2025"
+                    import re
+                    from datetime import datetime
+                    
+                    month_names = {
+                        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 
+                        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8, 
+                        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+                    }
+                    
+                    # Intentar extraer en formato "abril 14, 2025"
+                    match = re.search(r'([a-zé]+)\s+(\d{1,2})(?:[,\s]+|\s*,\s*)(\d{4})', date_text.lower())
+                    if match:
+                        month_name, day, year = match.groups()
+                        month = month_names.get(month_name.lower(), 1)
+                        try:
+                            date_obj = datetime(int(year), month, int(day))
+                            formatted_date = date_obj.strftime("%d/%m/%Y")
+                            print(f"Successfully formatted MundoMinero date: {formatted_date}")
+                            
+                            return {
+                                'raw': date_text,
+                                'formatted': formatted_date
+                            }
+                        except Exception as e:
+                            print(f"Error with direct date formatting: {e}")
+                            # Continuar con otros métodos si este falla
+            
+            # Si el método directo anterior falló, intentar con selectores
             date_selectors = [
                 'span.tt-post-date',          # MundoMinero específico
                 '.tt-post-date',              # Alternativa para MundoMinero
@@ -143,40 +178,32 @@ class WebsiteTwoScraper(Scraper):
                     break
             
             # Si no encontramos la fecha con los selectores, intentamos buscarla dentro del div.tt-post-label
-            if not date_text:
-                post_label = soup.find('div', class_='tt-post-label')
-                if post_label:
-                    # Buscar directamente el span con clase tt-post-date
-                    date_span = post_label.find('span', class_='tt-post-date')
-                    if date_span:
-                        date_text = date_span.get_text(strip=True)
-                        print(f"Found date in tt-post-label div: {date_text}")
-                    
-                    # Si no encontramos el span específico, buscar cualquier texto que parezca una fecha
-                    if not date_text:
-                        # Buscar todos los spans dentro de tt-post-label
-                        spans = post_label.find_all('span')
-                        for span in spans:
-                            span_text = span.get_text(strip=True)
-                            # Verificar si contiene un mes o un número que podría ser una fecha
-                            month_patterns = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
-                                            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-                            if any(month in span_text.lower() for month in month_patterns) or re.search(r'\d{1,2}[,\s]+\d{4}', span_text):
-                                date_text = span_text
-                                print(f"Found potential date in span: {date_text}")
-                                break
+            if not date_text and post_label:
+                # Ya intentamos buscar el span.tt-post-date antes, ahora buscamos cualquier otro texto
+                
+                # Buscar todos los spans dentro de tt-post-label
+                spans = post_label.find_all('span')
+                for span in spans:
+                    span_text = span.get_text(strip=True)
+                    # Verificar si contiene un mes o un número que podría ser una fecha
+                    month_patterns = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+                    if any(month in span_text.lower() for month in month_patterns) or re.search(r'\d{1,2}[,\s]+\d{4}', span_text):
+                        date_text = span_text
+                        print(f"Found potential date in span: {date_text}")
+                        break
             
             # Intentar formatear la fecha para mostrarla consistentemente
             if date_text:
                 try:
-                    # Añadir patrón para formato "abril 14, 2025" (mes día, año)
+                    # Importar las bibliotecas necesarias
                     import re
                     from datetime import datetime
                     
                     # Patrones comunes en español
                     patterns = [
-                        # Nuevo patrón para "abril 14, 2025"
-                        r'([a-zé]+)\s+(\d{1,2})[,\s]+(\d{4})',  # "abril 14, 2025" o "abril 14 2025"
+                        # Patrón específico para MundoMinero: "abril 14, 2025"
+                        r'([a-zé]+)\s+(\d{1,2})(?:[,\s]+|\s*,\s*)(\d{4})',  # "abril 14, 2025" con variaciones en la coma
                         
                         # Patrones existentes
                         r'(\d{1,2})\s+de\s+([a-zé]+),?\s+(\d{4})',  # "15 de abril, 2023"
@@ -193,6 +220,7 @@ class WebsiteTwoScraper(Scraper):
                         if match:
                             date_match = match.groups()
                             matched_pattern = i
+                            print(f"Matched pattern #{i}: {pattern}")
                             break
                     
                     if date_match:
@@ -207,6 +235,7 @@ class WebsiteTwoScraper(Scraper):
                             month = month_names.get(date_match[0].lower(), 1)
                             day = int(date_match[1])
                             year = int(date_match[2])
+                            print(f"Parsed date: day={day}, month={month}, year={year}")
                         elif matched_pattern == 1 or matched_pattern == 2:  # "15 de abril, 2023" o "15 abril 2023"
                             day = int(date_match[0])
                             month = month_names.get(date_match[1].lower(), 1)
